@@ -78,8 +78,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       'Print': []
     };
 
-    let filteredSequence = categorySequences[activeFilter] || categorySequences['all'];
-    if (!filteredSequence.includes(id)) {
+    let storedSequence: string[] = [];
+    try {
+      const parsedSequence = JSON.parse(sessionStorage.getItem('activeProjectSequence') || '[]');
+      if (Array.isArray(parsedSequence)) {
+        storedSequence = parsedSequence.filter((projectId): projectId is string => typeof projectId === 'string' && Boolean(projectId));
+      }
+    } catch {
+      storedSequence = [];
+    }
+
+    let filteredSequence = storedSequence.includes(id)
+      ? storedSequence
+      : categorySequences[activeFilter] || categorySequences['all'];
+
+    if (!filteredSequence.includes(id) || filteredSequence.length === 0) {
       filteredSequence = categorySequences['all'];
     }
 
@@ -210,10 +223,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     // 8. Lightbox Setup
     const galMeta = [
-      { src: '/images/Gemini_Generated_Image_39dgf639dgf639dg.png', l: 'Brand Asset 01' },
-      { src: '/images/Gemini_Generated_Image_4wbmmb4wbmmb4wbm.png', l: 'Brand Asset 02' },
-      { src: '/images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', l: 'Brand Asset 03' },
-      { src: '/images/Gemini_Generated_Image_5iyked5iyked5iyk.png', l: 'Brand Asset 04' }
+      { src: '/Images/Gemini_Generated_Image_39dgf639dgf639dg.png', l: 'Brand Asset 01' },
+      { src: '/Images/Gemini_Generated_Image_4wbmmb4wbmmb4wbm.png', l: 'Brand Asset 02' },
+      { src: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', l: 'Brand Asset 03' },
+      { src: '/Images/Gemini_Generated_Image_5iyked5iyked5iyk.png', l: 'Brand Asset 04' }
     ];
     let lbIdx = 0;
     function openLb(i: number) {
@@ -307,64 +320,34 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     // 11. Exit Intent form modal system
     const modal = document.getElementById('back-form-modal');
-    const backBtn = document.getElementById('navBackBtn');
     const modalClose = document.getElementById('modalCloseBtn');
     const modalCancel = document.getElementById('modalCancelBtn');
     const modalForm = document.getElementById('modal-contact-form') as HTMLFormElement;
     const modSuccess = document.getElementById('modal-success-message');
-    let isFormModalOpen = false;
-
-    function openFormModal() {
-      if (isFormModalOpen || !modal) return;
-      modal.classList.add('open');
-      isFormModalOpen = true;
-      document.body.style.overflow = 'hidden';
-    }
-
     function closeFormModal() {
       if (!modal) return;
       modal.classList.remove('open');
-      isFormModalOpen = false;
       document.body.style.overflow = '';
     }
 
-    function goHomeWithFlag() {
-      sessionStorage.setItem('showContactForm', '1');
+    function goHome() {
+      closeFormModal();
       router.push('/');
     }
 
-    // Push dummy states for back click intercept
-    history.pushState({ page: 'detail' }, '');
-    history.pushState({ page: 'exit-intent' }, '');
+    // Browser back from project pages should go to the homepage, not open the lead form.
+    history.replaceState({ page: 'project-detail' }, '', window.location.href);
+    history.pushState({ page: 'project-detail-current' }, '', window.location.href);
 
-    const handlePopState = (event: PopStateEvent) => {
-      if (!event.state || event.state.page !== 'exit-intent') {
-        goHomeWithFlag();
-      }
+    const handlePopState = () => {
+      closeFormModal();
+      router.replace('/');
     };
     window.addEventListener('popstate', handlePopState);
 
-    if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); goHomeWithFlag(); });
     if (modalClose) modalClose.addEventListener('click', closeFormModal);
-    if (modalCancel) modalCancel.addEventListener('click', () => { closeFormModal(); router.push('/'); });
+    if (modalCancel) modalCancel.addEventListener('click', goHome);
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeFormModal(); });
-
-    // Hover triggers
-    if (backBtn) backBtn.addEventListener('mouseenter', openFormModal);
-
-    const handleBackBtnHoverSimulation = (e: MouseEvent) => {
-      if (e.clientY < 50 && e.clientX < 150) {
-        openFormModal();
-      }
-    };
-    document.addEventListener('mousemove', handleBackBtnHoverSimulation);
-
-    const handleMouseLeaveTop = (e: MouseEvent) => {
-      if (e.clientY < 50) {
-        openFormModal();
-      }
-    };
-    document.addEventListener('mouseleave', handleMouseLeaveTop);
 
     // Form submit connection to Supabase Server Action
     if (modalForm) {
@@ -424,8 +407,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('keydown', handleProjectSwitchKeys);
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('mousemove', handleBackBtnHoverSimulation);
-      document.removeEventListener('mouseleave', handleMouseLeaveTop);
     };
   }, [id, router, prevId, nextId]);
 
@@ -442,9 +423,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 <svg width="0" height="0" style={{ position: "absolute", pointerEvents: "none" }}>
   <defs>
     <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7c3aed"/>
-      <stop offset="50%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#06b6d4"/>
+      <stop offset="0%" stopColor="#7c3aed"/>
+      <stop offset="50%" stopColor="#2563eb"/>
+      <stop offset="100%" stopColor="#06b6d4"/>
     </linearGradient>
   </defs>
 </svg>
@@ -452,13 +433,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 {/* NAV */}
 <nav className="nav" id="nav">
   <div className="nav-in">
-    <a href="index.html" className="logo"><div className="logo-i">R</div><span className="logo-t">Revti<span>Digital</span></span></a>
+    <a href="/" className="logo"><div className="logo-i">R</div><span className="logo-t">Revti<span>Digital</span></span></a>
     <ul className="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="index.html#showcase">Projects</a></li>
-      <li><a href="index.html#contact">Contact</a></li>
+      <li><a href="/">Home</a></li>
+      <li><a href="/#portfolio">Projects</a></li>
+      <li><a href="/#contact">Contact</a></li>
     </ul>
-    <a href="index.html" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
+    <a href="/" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
     <button className="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -466,9 +447,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
 
 <div className="mob-nav" id="mob">
-  <a href="index.html">Home</a>
-  <a href="index.html#showcase">Projects</a>
-  <a href="index.html#contact">Contact</a>
+  <a href="/">Home</a>
+  <a href="/#portfolio">Projects</a>
+  <a href="/#contact">Contact</a>
 </div>
 
 {/* ══ HERO — CENTERED, ONE-LINE ══ */}
@@ -481,8 +462,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   <div style={{ width: "100%" }}>
     <div className="proj-hero-content">
       <ol className="breadcrumb">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="index.html#showcase">Projects</a></li>
+        <li><a href="/">Home</a></li>
+        <li><a href="/#portfolio">Projects</a></li>
         <li>HealthCore Web Platform</li>
       </ol>
       <div className="proj-cat-pill">🏥 Web Development · Healthcare</div>
@@ -561,23 +542,23 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
         <div className="stacked-reveal-gallery">
             {/* Image 1 */}
-            <div className="reveal-img-container" onclick="openLightbox(0)">
-                <img src="./Images/Gemini_Generated_Image_39dgf639dgf639dg.png" alt="Brand Asset 01" />
+            <div className="reveal-img-container">
+                <img src="/Images/Gemini_Generated_Image_39dgf639dgf639dg.png" alt="Brand Asset 01" />
             </div>
 
             {/* Image 2 */}
-            <div className="reveal-img-container" onclick="openLightbox(1)">
-                <img src="./Images/Gemini_Generated_Image_4wbmmb4wbmmb4wbm.png" alt="Brand Asset 02" />
+            <div className="reveal-img-container">
+                <img src="/Images/Gemini_Generated_Image_4wbmmb4wbmmb4wbm.png" alt="Brand Asset 02" />
             </div>
 
             {/* Image 3 */}
-            <div className="reveal-img-container" onclick="openLightbox(2)">
-                <img src="./Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="Brand Asset 03" />
+            <div className="reveal-img-container">
+                <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="Brand Asset 03" />
             </div>
 
             {/* Image 4 */}
-            <div className="reveal-img-container" onclick="openLightbox(3)">
-                <img src="./Images/Gemini_Generated_Image_5iyked5iyked5iyk.png" alt="Brand Asset 04" />
+            <div className="reveal-img-container">
+                <img src="/Images/Gemini_Generated_Image_5iyked5iyked5iyk.png" alt="Brand Asset 04" />
             </div>
         </div>
     </div>
@@ -585,7 +566,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   <div className="lb" id="lb">
     <button className="lb-x" id="lb-x" type="button" aria-label="Close gallery lightbox">✕</button>
     <button className="lb-nav lb-prev" id="lb-prev" type="button" aria-label="Previous gallery image">&lt;</button>
-    <div className="lb-stage"><img className="lb-img" id="lb-img" src="" alt="" /><div className="lb-label" id="lb-label">Brand Asset</div><div className="lb-ctr" id="lb-ctr">1 / 4</div></div>
+    <div className="lb-stage"><img className="lb-img" id="lb-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" /><div className="lb-label" id="lb-label">Brand Asset</div><div className="lb-ctr" id="lb-ctr">1 / 4</div></div>
     <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
   </div>
 </section>
@@ -634,11 +615,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
 {/* Project Previous / Next */}
 <div className="project-switcher" aria-label="Project navigation">
-  <a className="project-switch project-prev" id="projectPrev" href="/project/seo" aria-label="Previous project">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 20 8 12 16 4"></polyline></svg>
+  <a className="project-switch project-prev" id="projectPrev" href={`/project/${prevId}`} aria-label="Previous project">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 20 8 12 16 4"></polyline></svg>
   </a>
-  <a className="project-switch project-next" id="projectNext" href="/project/branding" aria-label="Next project">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 20 16 12 8 4"></polyline></svg>
+  <a className="project-switch project-next" id="projectNext" href={`/project/${nextId}`} aria-label="Next project">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 20 16 12 8 4"></polyline></svg>
   </a>
 </div>
 
@@ -651,7 +632,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <a href="/project/seo" className="project-card">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost SEO Campaign" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost SEO Campaign" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">SEO</span>
@@ -673,7 +654,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <a href="/project/ecommerce" className="project-card">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">UI/UX</span>
@@ -695,7 +676,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <a href="/project/branding" className="project-card">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty Rebrand" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty Rebrand" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Branding</span>
@@ -719,7 +700,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 </section>
 
 {/* ══ BACK HOME ══ */}
-{/* <div className="back-bar"><a href="index.html" className="back-btn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a></div> */}
+{/* <div className="back-bar"><a href="/" className="back-btn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a></div> */}
 
 {/* ══ EXIT INTENT MODAL OVERLAY ══ */}
 <div id="back-form-modal" className="modal-overlay">

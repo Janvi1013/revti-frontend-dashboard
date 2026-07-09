@@ -1297,7 +1297,8 @@ export const indexCustomCss = `
     50% { opacity: 0.5; transform: scale(1.5); }
   }
 
-  .portfolio-title {
+  .portfolio-title,
+  .logo-carousel-title {
     font-size: clamp(40px, 7vw, 96px);
     font-weight: 900;
     line-height: 0.92;
@@ -1670,6 +1671,141 @@ export const indexCustomCss = `
     .filter-btn {
       padding: 7px 14px;
       font-size: 11px;
+    }
+  }
+
+
+
+
+  /* ── HOME LOGO CAROUSEL ── */
+  .logo-carousel-section {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(72px, 8vw, 112px) 0;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(124,58,237,.16), transparent 30%),
+      radial-gradient(circle at 82% 70%, rgba(6,182,212,.10), transparent 32%),
+      var(--bg2);
+    border-top: 1px solid rgba(255,255,255,.08);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .logo-carousel-section::before,
+  .logo-carousel-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: min(18vw, 220px);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .logo-carousel-section::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--bg2), rgba(10,10,18,0));
+  }
+
+  .logo-carousel-section::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--bg2), rgba(10,10,18,0));
+  }
+
+  .logo-carousel-header {
+    max-width: 760px;
+    margin: 0 auto clamp(34px, 5vw, 56px);
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .logo-carousel-eyebrow {
+    display: inline-flex;
+    margin-bottom: 14px;
+    padding: 7px 16px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    color: var(--txt2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,.04);
+  }
+
+  .logo-carousel-title {
+    font-size: clamp(30px, 4vw, 56px);
+    line-height: 1.02;
+    font-weight: 900;
+    letter-spacing: -.03em;
+    color: var(--txt);
+  }
+
+  .logo-carousel {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .logo-carousel-track {
+    display: flex;
+    width: max-content;
+    gap: 18px;
+    padding: 6px 18px;
+    animation: logoMarquee 32s linear infinite;
+  }
+
+  .logo-carousel:hover .logo-carousel-track {
+    animation-play-state: paused;
+  }
+
+  .client-logo-card {
+    min-width: clamp(180px, 18vw, 260px);
+    height: 108px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 24px;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+    backdrop-filter: blur(16px);
+    color: rgba(255,255,255,.76);
+    transition: transform .3s ease, border-color .3s ease, color .3s ease, background .3s ease;
+  }
+
+  .client-logo-card span {
+    font-size: clamp(18px, 2vw, 25px);
+    font-weight: 800;
+    letter-spacing: -.03em;
+    white-space: nowrap;
+  }
+
+  .client-logo-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(255,255,255,.22);
+    background: linear-gradient(135deg, rgba(124,58,237,.20), rgba(6,182,212,.12));
+    color: #fff;
+  }
+
+  @keyframes logoMarquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - 9px)); }
+  }
+
+  @media (max-width: 640px) {
+    .logo-carousel-section {
+      padding: 58px 0;
+    }
+
+    .logo-carousel-track {
+      gap: 12px;
+      animation-duration: 24s;
+    }
+
+    .client-logo-card {
+      min-width: 170px;
+      height: 88px;
+      border-radius: 18px;
     }
   }
 
