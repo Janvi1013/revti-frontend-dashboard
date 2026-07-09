@@ -723,6 +723,45 @@ export default function HomePage() {
   </div>
 </section>
 
+{/* ── LOGO CAROUSEL ── */}
+<section className="logo-carousel-section" aria-labelledby="logo-carousel-title">
+  <div className="logo-carousel-header rv">
+    <span className="logo-carousel-eyebrow">Trusted Collaborations</span>
+    <h2 className="logo-carousel-title" id="logo-carousel-title">Brands that trust our creative process</h2>
+  </div>
+  <div className="logo-carousel" aria-label="Client logo carousel">
+    <div className="logo-carousel-track">
+      {[
+        'Apollo Health',
+        'Zenith Realty',
+        'LuxeStore',
+        'OrganicBoost',
+        'FinEdge',
+        'IndustrIQ',
+        'NovaBrand',
+        'FoodieHub',
+      ].map((brand) => (
+        <div className="client-logo-card" key={`logo-a-${brand}`} aria-label={brand}>
+          <span>{brand}</span>
+        </div>
+      ))}
+      {[
+        'Apollo Health',
+        'Zenith Realty',
+        'LuxeStore',
+        'OrganicBoost',
+        'FinEdge',
+        'IndustrIQ',
+        'NovaBrand',
+        'FoodieHub',
+      ].map((brand) => (
+        <div className="client-logo-card" key={`logo-b-${brand}`} aria-hidden="true">
+          <span>{brand}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
 
 {/* ── CONTACT CTA ── */}
 <section className="contact-cta" id="contact" aria-labelledby="contact-cta-title">
