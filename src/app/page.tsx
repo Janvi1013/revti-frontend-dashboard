@@ -269,7 +269,7 @@ export default function HomePage() {
 {/* NAV */}
 <nav className="nav" id="nav">
   <div className="nav-in">
-    <a href="index.html" className="logo"><div className="logo-i">R</div><span className="logo-t">Revti<span>Digital</span></span></a>
+    <a href="/" className="logo"><div className="logo-i">R</div><span className="logo-t">Revti<span>Digital</span></span></a>
     <ul className="nav-links">
       <li><a href="#hero">Home</a></li>
       <li><a href="#portfolio">Projects</a></li>
@@ -353,7 +353,7 @@ export default function HomePage() {
       {/* <a href="/project/branding" className="project-card" data-category="Branding">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Branding</span>
@@ -380,7 +380,7 @@ export default function HomePage() {
 <a href="/project/branding" className="project-card" data-category="Branding">
   <div className="card-visual">
     <div className="card-image-wrapper">
-      <img src="Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
+      <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
       <div className="card-overlay">
         <div className="overlay-content">
           <span className="overlay-category">Branding</span>
@@ -409,7 +409,7 @@ export default function HomePage() {
       <a href="/project/websites" className="project-card" data-category="Websites">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png" alt="HealthCore Platform" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png" alt="HealthCore Platform" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Websites</span>
@@ -448,7 +448,7 @@ export default function HomePage() {
       <a href="/project/events" className="project-card" data-category="Events">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Events</span>
@@ -560,7 +560,7 @@ export default function HomePage() {
       <a href="/project/seo" className="project-card" data-category="Websites">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Web Design</span>
@@ -642,7 +642,7 @@ export default function HomePage() {
       <a href="/project/fintech" className="project-card" data-category="Packaging">
         <div className="card-visual">
           <div className="card-image-wrapper">
-            <img src="Images/Gemini_Generated_Image_ctaev4ctaev4ctae.png" alt="FinEdge" loading="lazy" />
+            <img src="/Images/Gemini_Generated_Image_ctaev4ctaev4ctae.png" alt="FinEdge" loading="lazy" />
             <div className="card-overlay">
               <div className="overlay-content">
                 <span className="overlay-category">Development</span>
@@ -728,7 +728,7 @@ export default function HomePage() {
 <section className="contact-cta" id="contact" aria-labelledby="contact-cta-title">
   <div className="wrap">
     <div className="contact-cta-box rv">
-      <h2 className="cta-title" id="contact-cta-title">Let's Create Something <span className="muted">Together</span></h2>
+      <h2 className="cta-title" id="contact-cta-title">Let&apos;s Create Something <span className="muted">Together</span></h2>
       <div className="cta-row">
         <span className="cta-line" aria-hidden="true"></span>
         <a href="mailto:hello@revtidigital.com" className="btn-primary">Get In Touch! <i className="fa-solid fa-arrow-right"></i></a>
