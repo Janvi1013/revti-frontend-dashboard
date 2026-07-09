@@ -307,64 +307,34 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     // 11. Exit Intent form modal system
     const modal = document.getElementById('back-form-modal');
-    const backBtn = document.getElementById('navBackBtn');
     const modalClose = document.getElementById('modalCloseBtn');
     const modalCancel = document.getElementById('modalCancelBtn');
     const modalForm = document.getElementById('modal-contact-form') as HTMLFormElement;
     const modSuccess = document.getElementById('modal-success-message');
-    let isFormModalOpen = false;
-
-    function openFormModal() {
-      if (isFormModalOpen || !modal) return;
-      modal.classList.add('open');
-      isFormModalOpen = true;
-      document.body.style.overflow = 'hidden';
-    }
-
     function closeFormModal() {
       if (!modal) return;
       modal.classList.remove('open');
-      isFormModalOpen = false;
       document.body.style.overflow = '';
     }
 
-    function goHomeWithFlag() {
-      sessionStorage.setItem('showContactForm', '1');
+    function goHome() {
+      closeFormModal();
       router.push('/');
     }
 
-    // Push dummy states for back click intercept
-    history.pushState({ page: 'detail' }, '');
-    history.pushState({ page: 'exit-intent' }, '');
+    // Browser back from project pages should go to the homepage, not open the lead form.
+    history.replaceState({ page: 'project-detail' }, '', window.location.href);
+    history.pushState({ page: 'project-detail-current' }, '', window.location.href);
 
-    const handlePopState = (event: PopStateEvent) => {
-      if (!event.state || event.state.page !== 'exit-intent') {
-        goHomeWithFlag();
-      }
+    const handlePopState = () => {
+      closeFormModal();
+      router.replace('/');
     };
     window.addEventListener('popstate', handlePopState);
 
-    if (backBtn) backBtn.addEventListener('click', (e) => { e.preventDefault(); goHomeWithFlag(); });
     if (modalClose) modalClose.addEventListener('click', closeFormModal);
-    if (modalCancel) modalCancel.addEventListener('click', () => { closeFormModal(); router.push('/'); });
+    if (modalCancel) modalCancel.addEventListener('click', goHome);
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeFormModal(); });
-
-    // Hover triggers
-    if (backBtn) backBtn.addEventListener('mouseenter', openFormModal);
-
-    const handleBackBtnHoverSimulation = (e: MouseEvent) => {
-      if (e.clientY < 50 && e.clientX < 150) {
-        openFormModal();
-      }
-    };
-    document.addEventListener('mousemove', handleBackBtnHoverSimulation);
-
-    const handleMouseLeaveTop = (e: MouseEvent) => {
-      if (e.clientY < 50) {
-        openFormModal();
-      }
-    };
-    document.addEventListener('mouseleave', handleMouseLeaveTop);
 
     // Form submit connection to Supabase Server Action
     if (modalForm) {
@@ -424,8 +394,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('keydown', handleProjectSwitchKeys);
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('mousemove', handleBackBtnHoverSimulation);
-      document.removeEventListener('mouseleave', handleMouseLeaveTop);
     };
   }, [id, router, prevId, nextId]);
 
@@ -455,7 +423,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <a href="/" className="logo"><div className="logo-i">R</div><span className="logo-t">Revti<span>Digital</span></span></a>
     <ul className="nav-links">
       <li><a href="/">Home</a></li>
-      <li><a href="/#showcase">Projects</a></li>
+      <li><a href="/#portfolio">Projects</a></li>
       <li><a href="/#contact">Contact</a></li>
     </ul>
     <a href="/" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
@@ -467,7 +435,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
 <div className="mob-nav" id="mob">
   <a href="/">Home</a>
-  <a href="/#showcase">Projects</a>
+  <a href="/#portfolio">Projects</a>
   <a href="/#contact">Contact</a>
 </div>
 
@@ -482,7 +450,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <div className="proj-hero-content">
       <ol className="breadcrumb">
         <li><a href="/">Home</a></li>
-        <li><a href="/#showcase">Projects</a></li>
+        <li><a href="/#portfolio">Projects</a></li>
         <li>HealthCore Web Platform</li>
       </ol>
       <div className="proj-cat-pill">🏥 Web Development · Healthcare</div>
@@ -634,10 +602,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
 {/* Project Previous / Next */}
 <div className="project-switcher" aria-label="Project navigation">
-  <a className="project-switch project-prev" id="projectPrev" href="/project/seo" aria-label="Previous project">
+  <a className="project-switch project-prev" id="projectPrev" href={`/project/${prevId}`} aria-label="Previous project">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 20 8 12 16 4"></polyline></svg>
   </a>
-  <a className="project-switch project-next" id="projectNext" href="/project/branding" aria-label="Next project">
+  <a className="project-switch project-next" id="projectNext" href={`/project/${nextId}`} aria-label="Next project">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 20 16 12 8 4"></polyline></svg>
   </a>
 </div>
