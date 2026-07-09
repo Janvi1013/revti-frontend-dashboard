@@ -1,0 +1,13 @@
+/* src/app/globals.css */
+/* Clean global stylesheet with no custom layout overrides. Styling is handled natively by page-specific CSS tags. */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}

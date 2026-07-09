@@ -1781,13 +1781,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/* Project Previous / Next navigation */
-const projectSequence = ['seo','social','healthcore','branding','ecommerce','fintech','mfg','nova'];
+/* Project Previous / Next navigation (Filtered by category if selected) */
 const params = new URLSearchParams(window.location.search);
-const currentProject = params.get('id') || 'healthcore';
-const currentProjectIndex = Math.max(projectSequence.indexOf(currentProject), 0);
-const prevProjectId = projectSequence[(currentProjectIndex - 1 + projectSequence.length) % projectSequence.length];
-const nextProjectId = projectSequence[(currentProjectIndex + 1) % projectSequence.length];
+let currentProject = params.get('id') || 'websites';
+if (currentProject === 'healthcore') currentProject = 'websites';
+
+const activeFilter = sessionStorage.getItem('activeCategoryFilter') || 'all';
+
+// Hardcoded mapping of categories to project sequences (matching index.html order)
+const categorySequences = {
+  'all': ['branding', 'websites', 'events', 'nova', 'mfg', 'seo', 'social', 'fintech', 'ecommerce'],
+  'Branding': ['branding', 'nova'],
+  'Websites': ['websites', 'seo', 'mfg'],
+  'Events': ['events', 'ecommerce'],
+  'Publication': ['nova', 'mfg'],
+  'Interiors': ['social'],
+  'Packaging': ['fintech'],
+  'Illustration': [],
+  'Print': []
+};
+
+// Get the sequence for the active filter
+let filteredSequence = categorySequences[activeFilter] || categorySequences['all'];
+
+// Fallback to all projects if current project is not in the filtered sequence
+if (!filteredSequence.includes(currentProject)) {
+  filteredSequence = categorySequences['all'];
+}
+
+const currentProjectIndex = filteredSequence.indexOf(currentProject);
+const prevProjectId = filteredSequence[(currentProjectIndex - 1 + filteredSequence.length) % filteredSequence.length];
+const nextProjectId = filteredSequence[(currentProjectIndex + 1) % filteredSequence.length];
+
 const projectPrev = document.getElementById('projectPrev');
 const projectNext = document.getElementById('projectNext');
 if (projectPrev && projectNext) {
