@@ -1232,60 +1232,7 @@
     line-height: 1.6;
   }
 
-  /* ══ HOVER DROPDOWN POPOVER FOR BACK BUTTON ══ */
-  .nav-back-container {
-    position: relative;
-    display: inline-block;
-  }
-  .popover-card {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    background: rgba(13, 13, 26, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    padding: 32px;
-    width: 580px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), var(--shadow-glow);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    z-index: 8990;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(10px);
-    transition: opacity 0.3s var(--ease), transform 0.3s var(--ease), visibility 0.3s;
-  }
-  .popover-card::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    right: 48px;
-    border: 8px solid transparent;
-    border-bottom-color: rgba(13, 13, 26, 0.98);
-  }
-  .popover-card.open {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-  .popover-card .modal-title {
-    font-size: 22px;
-    margin-bottom: 24px;
-  }
-  .popover-card .form-row {
-    gap: 16px;
-  }
-  .popover-card .modal-form {
-    gap: 18px;
-  }
-  .popover-card .checkbox-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px 16px;
-  }
-  .popover-card .form-submit-btn {
-    padding: 12px 28px;
-  }
-  
+
   .modal-cancel-link {
     background: none;
     border: none;
@@ -1336,95 +1283,7 @@
       <li><a href="index.html#showcase">Projects</a></li>
       <li><a href="index.html#contact">Contact</a></li>
     </ul>
-    <div class="nav-back-container">
-      <a href="index.html" class="nav-back" id="navBackBtn"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
-      <div id="back-form-popover" class="popover-card">
-        <h2 class="modal-title">Want your Brand to stand out? <span class="grad">Contact Us</span></h2>
-        <form id="popover-contact-form" class="modal-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="pop-name" class="form-label">Name</label>
-              <input type="text" id="pop-name" class="form-line-input" required placeholder="Your Name" />
-            </div>
-            <div class="form-group">
-              <label for="pop-email" class="form-label">Email</label>
-              <input type="email" id="pop-email" class="form-line-input" required placeholder="Your Email" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="pop-phone" class="form-label">Phone Number</label>
-              <input type="tel" id="pop-phone" class="form-line-input" required placeholder="Your Phone Number" />
-            </div>
-            <div class="form-group">
-              <label for="pop-web" class="form-label">Website Link (Optional)</label>
-              <input type="url" id="pop-web" class="form-line-input" placeholder="https://example.com" />
-            </div>
-          </div>
-          <div class="form-group full-width">
-            <span class="form-label">Looking For <span class="required">*</span></span>
-            <div class="checkbox-grid">
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Website Development" />
-                <span class="custom-checkbox"></span>
-                Website Development
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Branding" />
-                <span class="custom-checkbox"></span>
-                Branding
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="SEO" />
-                <span class="custom-checkbox"></span>
-                SEO
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Social Media Management" />
-                <span class="custom-checkbox"></span>
-                Social Media Management
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Digital Activation" />
-                <span class="custom-checkbox"></span>
-                Digital Activation
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Content" />
-                <span class="custom-checkbox"></span>
-                Content
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Corporate Videos & Photos" />
-                <span class="custom-checkbox"></span>
-                Corporate Videos & Photos
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="WhatsApp for Business" />
-                <span class="custom-checkbox"></span>
-                WhatsApp for Business
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="AI based Chat Bot" />
-                <span class="custom-checkbox"></span>
-                AI based Chat Bot
-              </label>
-              <label class="check-item">
-                <input type="checkbox" name="looking_for" value="Advertisement" />
-                <span class="custom-checkbox"></span>
-                Advertisement (PPC, Fb & Insta Ads, Lead Gen)
-              </label>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary form-submit-btn">ENQUIRE NOW</button>
-        </form>
-        <div id="popover-success-message" class="form-success-container" style="display: none;">
-          <div class="success-icon"><i class="fa-solid fa-circle-check"></i></div>
-          <h3>Thank You!</h3>
-          <p>Your enquiry has been submitted successfully.</p>
-        </div>
-      </div>
-    </div>
+    <a href="index.html" class="nav-back" id="navBackBtn"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
     <button class="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -1977,21 +1836,17 @@ gsap.fromTo('.impact-metric-card', {opacity:0, y:24, scale:.96}, {opacity:1, y:0
    ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('back-form-modal');
-  const popover = document.getElementById('back-form-popover');
   const backBtn = document.getElementById('navBackBtn');
   const modalClose = document.getElementById('modalCloseBtn');
   const modalCancel = document.getElementById('modalCancelBtn');
-  const popoverForm = document.getElementById('popover-contact-form');
   const modalForm = document.getElementById('modal-contact-form');
-  const popSuccess = document.getElementById('popover-success-message');
   const modSuccess = document.getElementById('modal-success-message');
 
   let isModalOpen = false;
-  let isPopoverPinned = false;
-  let popoverTimeout = null;
 
   // Show Modal function
   function openModal() {
+    if (isModalOpen) return;
     modal.classList.add('open');
     isModalOpen = true;
     document.body.style.overflow = 'hidden';
@@ -2004,32 +1859,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.style.overflow = '';
   }
 
-  // Navigate back to home function
-  function goHome() {
+  // Navigate back to home function with sessionStorage flag
+  function goHomeWithFlag() {
+    sessionStorage.setItem('showContactForm', 'true');
     window.location.href = 'index.html';
   }
 
-  // 1. Browser back button interception using History API
+  // 1. Browser back button click interception (redirects to index.html with popup)
   (function initHistoryInterception() {
-    // Push dummy exit intent states
+    // Push dummy exit intent states to capture the back action
     history.pushState({ page: 'detail' }, '');
     history.pushState({ page: 'exit-intent' }, '');
 
     window.addEventListener('popstate', (event) => {
-      // If we popped off exit-intent (user clicked browser back button)
+      // If user clicked the browser's back button, redirect to home page and show the form there
       if (!event.state || event.state.page !== 'exit-intent') {
-        openModal();
-        // Re-push state so they stay on the page
-        history.pushState({ page: 'exit-intent' }, '');
+        goHomeWithFlag();
       }
     });
   })();
 
-  // 2. Nav Back Button Click (Modal Open)
+  // 2. Nav Back Button Click (Goes to home page and shows form)
   if (backBtn) {
     backBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      openModal();
+      goHomeWithFlag();
     });
   }
 
@@ -2038,7 +1892,10 @@ document.addEventListener('DOMContentLoaded', () => {
     modalClose.addEventListener('click', closeModal);
   }
   if (modalCancel) {
-    modalCancel.addEventListener('click', goHome);
+    modalCancel.addEventListener('click', () => {
+      closeModal();
+      window.location.href = 'index.html';
+    });
   }
 
   // Close modal when clicking outside the card
@@ -2048,88 +1905,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 4. Hover Popover behavior (Desktop only, screens > 900px)
-  function showPopover() {
-    if (window.innerWidth <= 900) return;
-    clearTimeout(popoverTimeout);
-    popover.classList.add('open');
+  // 4. Hover behaviors (Opens the centered modal form)
+  // 4a. Back to Home Button Hover
+  if (backBtn) {
+    backBtn.addEventListener('mouseenter', openModal);
   }
 
-  function hidePopover() {
-    if (isPopoverPinned) return;
-    clearTimeout(popoverTimeout);
-    popoverTimeout = setTimeout(() => {
-      popover.classList.remove('open');
-    }, 300);
-  }
-
-  if (backBtn && popover) {
-    const parentContainer = backBtn.closest('.nav-back-container');
-
-    // On hover of back button / parent container
-    parentContainer.addEventListener('mouseenter', showPopover);
-    parentContainer.addEventListener('mouseleave', hidePopover);
-
-    // If mouse enters popover card, keep it open
-    popover.addEventListener('mouseenter', showPopover);
-    popover.addEventListener('mouseleave', hidePopover);
-
-    // Click inside popover pins it (won't close on hover leave)
-    popover.addEventListener('click', (e) => {
-      isPopoverPinned = true;
-    });
-
-    // Pin popover on focus of any inputs/checkboxes inside it
-    popover.querySelectorAll('input').forEach(input => {
-      input.addEventListener('focus', () => {
-        isPopoverPinned = true;
-      });
-    });
-
-    // Click outside handler to close/unpin popover
-    document.addEventListener('click', (e) => {
-      if (!parentContainer.contains(e.target)) {
-        isPopoverPinned = false;
-        popover.classList.remove('open');
-      }
-    });
-  }
-
-  // 5. Form Submissions
-  function handleFormSubmit(e, form, successContainer) {
-    e.preventDefault();
-    
-    // Check if at least one checkbox is selected
-    const checkboxes = form.querySelectorAll('input[name="looking_for"]:checked');
-    if (checkboxes.length === 0) {
-      alert("Please select at least one service option.");
-      return;
+  // 4b. Browser back button hover simulation (top-left mouse coordinates exit-intent)
+  document.addEventListener('mousemove', (e) => {
+    if (e.clientY < 50 && e.clientX < 150) {
+      openModal();
     }
+  });
 
-    // Hide form, show success
-    form.style.display = 'none';
-    successContainer.style.display = 'block';
+  // Also trigger modal if the mouse leaves the top of the viewport
+  document.addEventListener('mouseleave', (e) => {
+    if (e.clientY < 50) {
+      openModal();
+    }
+  });
 
-    // After 2 seconds redirect to index.html
-    setTimeout(() => {
-      goHome();
-    }, 2000);
-  }
-
-  if (popoverForm) {
-    popoverForm.addEventListener('submit', (e) => handleFormSubmit(e, popoverForm, popSuccess));
-  }
+  // 5. Form Submission (redirects to home directly after success)
   if (modalForm) {
-    modalForm.addEventListener('submit', (e) => handleFormSubmit(e, modalForm, modSuccess));
+    modalForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const checkboxes = modalForm.querySelectorAll('input[name="looking_for"]:checked');
+      if (checkboxes.length === 0) {
+        alert("Please select at least one service option.");
+        return;
+      }
+
+      modalForm.style.display = 'none';
+      modSuccess.style.display = 'block';
+
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    });
   }
 
-  // 6. Custom Cursor Hover delegation for dynamically active popover
+  // 6. Custom Cursor Hover delegation
   const cursorRing = document.getElementById('cur-ring');
-  if (cursorRing) {
-    const hoverables = [
-      ...popover.querySelectorAll('input, label, .check-item, .custom-checkbox, .form-submit-btn'),
-      ...modal.querySelectorAll('input, label, .check-item, .custom-checkbox, .form-submit-btn, .modal-close, .modal-cancel-link')
-    ];
+  if (cursorRing && modal) {
+    const hoverables = modal.querySelectorAll('input, label, .check-item, .custom-checkbox, .form-submit-btn, .modal-close, .modal-cancel-link');
     hoverables.forEach(el => {
       el.addEventListener('mouseenter', () => cursorRing.classList.add('h'));
       el.addEventListener('mouseleave', () => cursorRing.classList.remove('h'));

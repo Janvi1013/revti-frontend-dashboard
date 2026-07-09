@@ -1874,6 +1874,229 @@
     html, body, *, *::before, *::after { cursor: auto !important; }
   }
 
+  /* ══ EXIT INTENT MODAL & POPUP FORM ══ */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(6, 6, 15, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 2147483640; /* High z-index but below custom cursor */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-card {
+    background: rgba(13, 13, 26, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 48px;
+    max-width: 680px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(124,58,237,.2), 0 20px 50px rgba(0,0,0,0.5);
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-overlay.open .modal-card {
+    transform: scale(1) translateY(0);
+  }
+  .modal-close {
+    position: absolute;
+    top: 24px; right: 24px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 28px;
+    line-height: 1;
+    cursor: none !important;
+    transition: color 0.2s;
+  }
+  .modal-close:hover {
+    color: var(--text-primary);
+  }
+  .modal-title {
+    font-family: var(--font-heading), var(--font-body), sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .modal-title .grad {
+    background: var(--grad-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .modal-card {
+      padding: 32px 24px;
+    }
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+  .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .form-label .required {
+    color: #ef4444;
+  }
+  .form-line-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 0;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: var(--font-body), sans-serif;
+    outline: none;
+    cursor: none !important;
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .form-line-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+  .form-line-input:focus {
+    border-color: #06b6d4;
+  }
+  
+  /* Checkboxes section */
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 20px;
+    margin-top: 8px;
+  }
+  @media (max-width: 500px) {
+    .checkbox-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: none !important;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .check-item:hover {
+    color: var(--text-primary);
+  }
+  .check-item input[type="checkbox"] {
+    display: none;
+  }
+  .custom-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+  }
+  .check-item input[type="checkbox"]:checked + .custom-checkbox {
+    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.2);
+  }
+  .check-item input[type="checkbox"]:checked + .custom-checkbox::after {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 11px;
+    color: var(--text-primary);
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-submit-btn {
+    align-self: flex-start;
+    padding: 14px 32px;
+    border-radius: 99px;
+    background: var(--text-primary);
+    border: none;
+    color: #06060f !important;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    cursor: none !important;
+    box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .form-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255,255,255,0.18);
+  }
+
+  /* Success State */
+  .form-success-container {
+    text-align: center;
+    padding: 40px 0;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .success-icon {
+    font-size: 64px;
+    color: #10b981;
+    margin-bottom: 24px;
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+  .form-success-container h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+  }
+  .form-success-container p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   </style>
 </head>
 <body>
@@ -2357,8 +2580,98 @@
       </div>
     </div>
   </div>
-</section>
-
+<!-- ══ EXIT INTENT MODAL OVERLAY ══ -->
+<div id="back-form-modal" class="modal-overlay">
+  <div class="modal-card">
+    <button class="modal-close" id="modalCloseBtn" aria-label="Close form">&times;</button>
+    <h2 class="modal-title">Want your Brand to stand out? <span class="grad">Contact Us</span></h2>
+    <form id="modal-contact-form" class="modal-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mod-name" class="form-label">Name</label>
+          <input type="text" id="mod-name" class="form-line-input" required placeholder="Your Name" />
+        </div>
+        <div class="form-group">
+          <label for="mod-email" class="form-label">Email</label>
+          <input type="email" id="mod-email" class="form-line-input" required placeholder="Your Email" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mod-phone" class="form-label">Phone Number</label>
+          <input type="tel" id="mod-phone" class="form-line-input" required placeholder="Your Phone Number" />
+        </div>
+        <div class="form-group">
+          <label for="mod-web" class="form-label">Website Link (Optional)</label>
+          <input type="url" id="mod-web" class="form-line-input" placeholder="https://example.com" />
+        </div>
+      </div>
+      <div class="form-group full-width">
+        <span class="form-label">Looking For <span class="required">*</span></span>
+        <div class="checkbox-grid">
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Website Development" />
+            <span class="custom-checkbox"></span>
+            Website Development
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Branding" />
+            <span class="custom-checkbox"></span>
+            Branding
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="SEO" />
+            <span class="custom-checkbox"></span>
+            SEO
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Social Media Management" />
+            <span class="custom-checkbox"></span>
+            Social Media Management
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Digital Activation" />
+            <span class="custom-checkbox"></span>
+            Digital Activation
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Content" />
+            <span class="custom-checkbox"></span>
+            Content
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Corporate Videos & Photos" />
+            <span class="custom-checkbox"></span>
+            Corporate Videos & Photos
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="WhatsApp for Business" />
+            <span class="custom-checkbox"></span>
+            WhatsApp for Business
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="AI based Chat Bot" />
+            <span class="custom-checkbox"></span>
+            AI based Chat Bot
+          </label>
+          <label class="check-item">
+            <input type="checkbox" name="looking_for" value="Advertisement" />
+            <span class="custom-checkbox"></span>
+            Advertisement (PPC, Fb & Insta Ads, Lead Gen)
+          </label>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+        <button type="submit" class="btn-primary form-submit-btn">ENQUIRE NOW</button>
+      </div>
+    </form>
+    <div id="modal-success-message" class="form-success-container" style="display: none;">
+      <div class="success-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <h3>Thank You!</h3>
+      <p>Your enquiry has been submitted successfully. We will get back to you shortly.</p>
+    </div>
+  </div>
+</div>
 
 <script>
 gsap.registerPlugin(ScrollTrigger);
@@ -2730,7 +3043,81 @@ document.addEventListener('DOMContentLoaded', () => {
       scrollTrigger: { trigger: projectGrid, start: 'top 80%', once: true }
     });
   }
-    
+
+/* ══════════════════════════════════════
+   EXIT-INTENT CONTACT POPUP FORM SYSTEM
+   ══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('back-form-modal');
+  const modalClose = document.getElementById('modalCloseBtn');
+  const modalForm = document.getElementById('modal-contact-form');
+  const modSuccess = document.getElementById('modal-success-message');
+
+  let isModalOpen = false;
+
+  function openModal() {
+    if (isModalOpen) return;
+    modal.classList.add('open');
+    isModalOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    isModalOpen = false;
+    document.body.style.overflow = '';
+  }
+
+  // Check if we came from project back navigation
+  if (sessionStorage.getItem('showContactForm') === 'true') {
+    sessionStorage.removeItem('showContactForm');
+    setTimeout(() => {
+      openModal();
+    }, 100);
+  }
+
+  if (modalClose) {
+    modalClose.addEventListener('click', closeModal);
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  if (modalForm) {
+    modalForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const checkboxes = modalForm.querySelectorAll('input[name="looking_for"]:checked');
+      if (checkboxes.length === 0) {
+        alert("Please select at least one service option.");
+        return;
+      }
+
+      modalForm.style.display = 'none';
+      modSuccess.style.display = 'block';
+
+      setTimeout(() => {
+        closeModal();
+        modalForm.style.display = 'flex';
+        modSuccess.style.display = 'none';
+        modalForm.reset();
+      }, 2000);
+    });
+  }
+
+  // Custom Cursor Hover delegation
+  const cursorRing = document.getElementById('curRing');
+  if (cursorRing && modal) {
+    const hoverables = modal.querySelectorAll('input, label, .check-item, .custom-checkbox, .form-submit-btn, .modal-close');
+    hoverables.forEach(el => {
+      el.addEventListener('mouseenter', () => cursorRing.classList.add('h'));
+      el.addEventListener('mouseleave', () => cursorRing.classList.remove('h'));
+    });
+  }
+});
 
 </script>
 </body>
