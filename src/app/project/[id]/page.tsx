@@ -78,8 +78,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       'Print': []
     };
 
-    let filteredSequence = categorySequences[activeFilter] || categorySequences['all'];
-    if (!filteredSequence.includes(id)) {
+    let storedSequence: string[] = [];
+    try {
+      const parsedSequence = JSON.parse(sessionStorage.getItem('activeProjectSequence') || '[]');
+      if (Array.isArray(parsedSequence)) {
+        storedSequence = parsedSequence.filter((projectId): projectId is string => typeof projectId === 'string' && Boolean(projectId));
+      }
+    } catch {
+      storedSequence = [];
+    }
+
+    let filteredSequence = storedSequence.includes(id)
+      ? storedSequence
+      : categorySequences[activeFilter] || categorySequences['all'];
+
+    if (!filteredSequence.includes(id) || filteredSequence.length === 0) {
       filteredSequence = categorySequences['all'];
     }
 

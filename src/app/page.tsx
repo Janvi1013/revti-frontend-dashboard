@@ -219,18 +219,38 @@ export default function HomePage() {
       });
     }
 
-    // 8. Portfolio Filter
+    // 8. Portfolio Filter + category-aware project navigation
     const filterButtons = document.querySelectorAll('.filter-btn');
-    const projectCards = document.querySelectorAll('.project-card');
-    sessionStorage.setItem('activeCategoryFilter', 'all');
+    const projectCards = document.querySelectorAll<HTMLAnchorElement>('.project-card');
+    let activeCategoryFilter = 'all';
+
+    const getProjectIdFromHref = (href: string) => {
+      const projectPath = '/project/';
+      const pathStart = href.indexOf(projectPath);
+      if (pathStart === -1) return '';
+      return href.slice(pathStart + projectPath.length).split(/[?#/]/)[0];
+    };
+
+    const syncProjectSequence = (selectedFilter: string) => {
+      const projectIds = Array.from(projectCards)
+        .filter(card => selectedFilter === 'all' || card.getAttribute('data-category') === selectedFilter)
+        .map(card => getProjectIdFromHref(card.getAttribute('href') || ''))
+        .filter((projectId, index, ids) => projectId && ids.indexOf(projectId) === index);
+
+      sessionStorage.setItem('activeCategoryFilter', selectedFilter);
+      sessionStorage.setItem('activeProjectSequence', JSON.stringify(projectIds));
+    };
+
+    syncProjectSequence(activeCategoryFilter);
 
     filterButtons.forEach(button => {
       button.addEventListener('click', () => {
         filterButtons.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
 
-        const selectedFilter = button.getAttribute('data-filter');
-        sessionStorage.setItem('activeCategoryFilter', selectedFilter || 'all');
+        const selectedFilter = button.getAttribute('data-filter') || 'all';
+        activeCategoryFilter = selectedFilter;
+        syncProjectSequence(selectedFilter);
 
         projectCards.forEach(card => {
           card.classList.add('fade-out');
@@ -249,6 +269,14 @@ export default function HomePage() {
             }
           });
         }, 400);
+      });
+    });
+
+    projectCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const cardCategory = card.getAttribute('data-category') || 'all';
+        const sequenceFilter = activeCategoryFilter === 'all' ? 'all' : cardCategory;
+        syncProjectSequence(sequenceFilter);
       });
     });
 
