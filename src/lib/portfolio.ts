@@ -181,5 +181,5 @@ export const extractPortfolioProjects = (payload: any) => {
 
 export const getPortfolioApiUrl = (path = '/api/portfolio') => {
   const apiBaseUrl = getBackendBaseUrl();
-  return apiBaseUrl ? `${apiBaseUrl}${path}` : '';
+  return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 };
