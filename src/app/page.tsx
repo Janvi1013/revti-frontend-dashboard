@@ -3,6 +3,59 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
+import { fallbackImpactStats, fallbackLogos, normalizeImpactStats, normalizeLogos } from '@/lib/dynamicContent';
+
+type PortfolioProject = {
+  id: string;
+  title: string;
+  category: string;
+  tags: string[];
+  image?: string;
+  imageAlt?: string;
+  icon?: string;
+  placeholderGradient?: string;
+};
+
+const fallbackPortfolioProjects: PortfolioProject[] = [
+  { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty' },
+  { id: 'websites', title: 'Healthcare Platform', category: 'Websites', tags: ['Healthcare', 'SaaS', 'Dashboard'], image: '/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png', imageAlt: 'HealthCore Platform' },
+  { id: 'events', title: 'LuxeStore Commerce', category: 'Events', tags: ['E-Commerce', 'UX Research', 'Design System'], image: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', imageAlt: 'LuxeStore Commerce' },
+  { id: 'nova', title: 'FitTrack Pro', category: 'Publication', tags: ['iOS', 'Android', 'Health'], icon: '📱', placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' },
+  { id: 'mfg', title: 'IndustrIQ IoT Dashboard', category: 'Publication', tags: ['React', 'IoT', 'Real-time'], icon: '🏭', placeholderGradient: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))' },
+  { id: 'seo', title: 'OrganicBoost SEO Campaign', category: 'Websites', tags: ['SEO', 'Marketing', 'Growth'], image: '/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png', imageAlt: 'OrganicBoost' },
+  { id: 'social', title: 'ArtFlow Creative Platform', category: 'Interiors', tags: ['Creative', 'Collaboration', 'SaaS'], icon: '🎨', placeholderGradient: 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))' },
+  { id: 'fintech', title: 'PayWise Finance App', category: 'Packaging', tags: ['Fintech', 'Payments', 'Security'], icon: '💰', placeholderGradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))' },
+  { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))' },
+];
+
+const getStringValue = (source: any, keys: string[]) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+};
+
+const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
+  const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
+  if (!title) return null;
+
+  const rawTags = item?.tags || item?.technologies || item?.services || item?.skills || [];
+  const tags = Array.isArray(rawTags)
+    ? rawTags.map(tag => typeof tag === 'string' ? tag : getStringValue(tag, ['name', 'title'])).filter(Boolean).slice(0, 3)
+    : String(rawTags).split(',').map(tag => tag.trim()).filter(Boolean).slice(0, 3);
+
+  return {
+    id: getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`,
+    title,
+    category: getStringValue(item, ['category', 'type', 'portfolioCategory']) || 'Branding',
+    tags: tags.length ? tags : ['Case Study'],
+    image: getStringValue(item, ['image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']),
+    imageAlt: getStringValue(item, ['imageAlt', 'alt']) || title,
+    icon: '✨',
+    placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
+  };
+};
 
 type PortfolioProject = {
   id: string;
@@ -58,6 +111,8 @@ const normalizePortfolioProject = (item: any, index: number): PortfolioProject |
 
 export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [impactStats, setImpactStats] = useState(fallbackImpactStats);
+  const [logos, setLogos] = useState(fallbackLogos);
 
   const portfolioCategories = useMemo(() => {
     const categories = portfolioProjects.map(project => project.category).filter(Boolean);
@@ -69,6 +124,20 @@ export default function HomePage() {
     if (!apiBaseUrl) return;
 
     const controller = new AbortController();
+
+    async function loadHomeContent() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/home`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Home content request failed with ${response.status}`);
+        const payload = await response.json();
+        setImpactStats(normalizeImpactStats(payload));
+        setLogos(normalizeLogos(payload));
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Unable to load home content from backend.', error);
+        }
+      }
+    }
 
     async function loadPortfolioProjects() {
       try {
@@ -90,6 +159,7 @@ export default function HomePage() {
       }
     }
 
+    loadHomeContent();
     loadPortfolioProjects();
 
     return () => controller.abort();
@@ -425,10 +495,13 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
-      <div className="impact-item rv"><span className="impact-num counter" data-t="10" data-s="+">10+</span><div className="impact-label">Years of Experience</div><div className="impact-sub">Delivering results since 2018</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".1s" }}><span className="impact-num counter" data-t="200" data-s="+">200+</span><div className="impact-label">Clients Served</div><div className="impact-sub">Across 8+ industries globally</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".2s" }}><span className="impact-num counter" data-t="50" data-s="+">50+</span><div className="impact-label">Projects Delivered</div><div className="impact-sub">On time, on budget, on point</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".3s" }}><span className="impact-num counter" data-t="8" data-s="+">8+</span><div className="impact-label">Industries Covered</div><div className="impact-sub">Focused expertise across growth sectors</div></div>
+      {impactStats.map((item, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={item.label}>
+          <span className="impact-num counter" data-p={item.prefix || ''} data-t={item.target} data-s={item.suffix || ''}>{item.value}</span>
+          <div className="impact-label">{item.label}</div>
+          <div className="impact-sub">{item.sub}</div>
+        </div>
+      ))}
     </div>
   </div>
 </section>
@@ -502,32 +575,14 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-a-${brand}`} aria-label={brand}>
-          <span>{brand}</span>
+      {logos.map((brand) => (
+        <div className="client-logo-card" key={`logo-a-${brand.name}`} aria-label={brand.name}>
+          <span>{brand.name}</span>
         </div>
       ))}
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-b-${brand}`} aria-hidden="true">
-          <span>{brand}</span>
+      {logos.map((brand) => (
+        <div className="client-logo-card" key={`logo-b-${brand.name}`} aria-hidden="true">
+          <span>{brand.name}</span>
         </div>
       ))}
     </div>

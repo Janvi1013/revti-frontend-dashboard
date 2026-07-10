@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
+import { fallbackProjectDetail, normalizeProjectDetail } from '@/lib/dynamicContent';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -12,6 +13,45 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const [prevId, setPrevId] = useState('seo');
   const [nextId, setNextId] = useState('branding');
+  const [projectDetail, setProjectDetail] = useState({ ...fallbackProjectDetail, id });
+  const [backendProjectSequence, setBackendProjectSequence] = useState<string[]>([]);
+
+  useEffect(() => {
+    setProjectDetail(current => ({ ...current, id }));
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
+    if (!apiBaseUrl) return;
+
+    const controller = new AbortController();
+
+    async function loadProjectContent() {
+      try {
+        const [projectResponse, portfolioResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/api/portfolio/${id}`, { signal: controller.signal }),
+          fetch(`${apiBaseUrl}/api/portfolio`, { signal: controller.signal }),
+        ]);
+
+        if (portfolioResponse.ok) {
+          const portfolioPayload = await portfolioResponse.json();
+          const rows = Array.isArray(portfolioPayload) ? portfolioPayload : portfolioPayload?.data || portfolioPayload?.portfolio || portfolioPayload?.projects || [];
+          if (Array.isArray(rows)) {
+            setBackendProjectSequence(rows.map((item: any) => item?.slug || item?.id || item?._id).filter(Boolean));
+          }
+        }
+
+        if (projectResponse.ok) {
+          setProjectDetail(normalizeProjectDetail(await projectResponse.json(), id));
+        }
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Unable to load project content from backend.', error);
+        }
+      }
+    }
+
+    loadProjectContent();
+
+    return () => controller.abort();
+  }, [id]);
 
   useEffect(() => {
     // 1. GSAP ScrollTrigger register
@@ -67,7 +107,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     // 2. Dynamic Prev / Next Navigation setup (Filtered by category)
     const activeFilter = sessionStorage.getItem('activeCategoryFilter') || 'all';
     const categorySequences: Record<string, string[]> = {
-      'all': ['branding', 'websites', 'events', 'nova', 'mfg', 'seo', 'social', 'fintech', 'ecommerce'],
+      'all': backendProjectSequence.length ? backendProjectSequence : ['branding', 'websites', 'events', 'nova', 'mfg', 'seo', 'social', 'fintech', 'ecommerce'],
       'Branding': ['branding', 'nova'],
       'Websites': ['websites', 'seo', 'mfg'],
       'Events': ['events', 'ecommerce'],
@@ -408,7 +448,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [id, router, prevId, nextId]);
+  }, [id, router, prevId, nextId, backendProjectSequence]);
 
   return (
     <>
@@ -464,31 +504,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <ol className="breadcrumb">
         <li><a href="/">Home</a></li>
         <li><a href="/#portfolio">Projects</a></li>
-        <li>HealthCore Web Platform</li>
+        <li>{projectDetail.title} {projectDetail.titleAccent}</li>
       </ol>
-      <div className="proj-cat-pill">🏥 Web Development · Healthcare</div>
+      <div className="proj-cat-pill">{projectDetail.categoryIcon} {projectDetail.category}</div>
       {/* ONE-LINE HEADING */}
       <h1 className="proj-h1">
-        HealthCore <span className="grad">Web Platform</span>
+        {projectDetail.title} <span className="grad">{projectDetail.titleAccent}</span>
       </h1>
-      <p className="proj-sub">AI-powered, HIPAA-compliant patient management serving 500+ hospitals — 40% fewer diagnostic errors and $12M in annual savings.</p>
+      <p className="proj-sub">{projectDetail.subtitle}</p>
       <div className="proj-meta-row">
-        <div className="meta-item">
-          <span className="meta-label">Client</span>
-          <span className="meta-value">Apollo Health Systems</span>
-        </div>
-        <div className="meta-item">
-          <span className="meta-label">Industry</span>
-          <span className="meta-value">Healthcare / MedTech</span>
-        </div>
-        <div className="meta-item">
-          <span className="meta-label">Year</span>
-          <span className="meta-value">2023 – 2024</span>
-        </div>
-        <div className="meta-item">
-          <span className="meta-label">Sprint</span>
-          <span className="meta-value">18-Month Agile</span>
-        </div>
+        {projectDetail.meta.map(item => (
+          <div className="meta-item" key={item.label}>
+            <span className="meta-label">{item.label}</span>
+            <span className="meta-value">{item.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   </div>
@@ -500,17 +530,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <div className="overview-grid">
       <div>
         {/* <div className="sec-label rv"><span className="dot"></span> Overview</div> */}
-          <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">Overview</span></h2>
-        <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>Revolutionising diagnostics with AI intelligence</h2>
-        <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>Apollo Health Systems faced fragmented patient data across 500+ facilities — overwhelming clinical staff and causing costly diagnostic delays. Revti Digital designed and engineered a unified AI-powered platform that connects every hospital, surfaces real-time insights, and assists physicians with evidence-based recommendations.</p>
-        <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>Full HIPAA, HL7 FHIR R4, and ISO 27001 compliance from sprint one — zero security incidents since April 2024 launch.</p>
+          <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">{projectDetail.overviewEyebrow}</span></h2>
+        <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>{projectDetail.overviewTitle}</h2>
+        {projectDetail.overviewParagraphs.map((paragraph, index) => (
+          <p className="ov-p rv" style={{ transitionDelay: `${0.15 + index * 0.05}s` }} key={paragraph}>{paragraph}</p>
+        ))}
 
       </div>
       <div className="ov-cards">
-        <div className="ov-card rv" style={{ transitionDelay: ".1s" }}><div className="ov-icon" style={{ background: "rgba(124,58,237,.15)", border: "1px solid rgba(124,58,237,.25)" }}>🎯</div><div className="ov-text"><h4>The Challenge</h4><p>500+ hospitals, 15 different EMR systems, zero unified intelligence — causing diagnostic inconsistencies and dangerous data silos.</p></div></div>
-        <div className="ov-card rv" style={{ transitionDelay: ".15s" }}><div className="ov-icon" style={{ background: "rgba(6,182,212,.12)", border: "1px solid rgba(6,182,212,.25)" }}>💡</div><div className="ov-text"><h4>Our Approach</h4><p>Microservices with an AI inference engine, FHIR R4 federation layer, and a clinical-grade React UI with 200+ purpose-built components.</p></div></div>
-        <div className="ov-card rv" style={{ transitionDelay: ".2s" }}><div className="ov-icon" style={{ background: "rgba(37,99,235,.12)", border: "1px solid rgba(37,99,235,.25)" }}>📈</div><div className="ov-text"><h4>The Impact</h4><p>40% fewer diagnostic errors, 3× faster reporting, $12M annual savings, 99.99% uptime across all 500+ hospitals.</p></div></div>
-        <div className="ov-card rv" style={{ transitionDelay: ".25s" }}><div className="ov-icon" style={{ background: "rgba(124,58,237,.12)", border: "1px solid rgba(124,58,237,.2)" }}>🛡️</div><div className="ov-text"><h4>Compliance First</h4><p>Full HIPAA, HL7 FHIR R4, and ISO 27001 compliance baked in from sprint one — zero security incidents since launch.</p></div></div>
+        {projectDetail.overviewCards.map((card, index) => (
+          <div className="ov-card rv" style={{ transitionDelay: `${0.1 + index * 0.05}s` }} key={card.title}><div className="ov-icon" style={{ background: "rgba(124,58,237,.15)", border: "1px solid rgba(124,58,237,.25)" }}>{card.icon}</div><div className="ov-text"><h4>{card.title}</h4><p>{card.text}</p></div></div>
+        ))}
       </div>
     </div>
   </div>
@@ -520,13 +550,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 <section className="proj-process" id="process">
   <div className="wrap">
     {/* <div className="sec-label rv"><span className="dot"></span> Our Process</div> */}
-    <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
+    <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>{projectDetail.processTitle} <span className="grad">{projectDetail.processAccent}</span></h2>
     <div className="timeline">
-      <div className="tl-item rv"><div className="tl-dot">🔍</div><div className="tl-body"><div className="tl-step">Phase 01 · Weeks 1–4</div><h3 className="tl-title">Discovery & Research</h3><p className="tl-text">80+ stakeholder interviews across 12 hospitals. Mapped 200+ clinical workflows and synthesised 40 pain points into a strategic platform blueprint.</p></div></div>
-      <div className="tl-item rv" style={{ transitionDelay: ".06s" }}><div className="tl-dot">📐</div><div className="tl-body"><div className="tl-step">Phase 02 · Weeks 5–10</div><h3 className="tl-title">Architecture & Strategy</h3><p className="tl-text">Designed a microservices platform with FastAPI backend, TensorFlow AI models, React frontend, AWS GovCloud infrastructure, and FHIR R4 API layer unifying 15 EMR systems.</p></div></div>
-      <div className="tl-item rv" style={{ transitionDelay: ".1s" }}><div className="tl-dot">🎨</div><div className="tl-body"><div className="tl-step">Phase 03 · Weeks 8–16</div><h3 className="tl-title">Design & Prototyping</h3><p className="tl-text">Clinical-grade design system with 200+ components. Six rounds of usability testing with actual clinicians. WCAG 2.1 AA accessibility enforced from first wireframe.</p></div></div>
-      <div className="tl-item rv" style={{ transitionDelay: ".14s" }}><div className="tl-dot">⚙️</div><div className="tl-body"><div className="tl-step">Phase 04 · Weeks 12–52</div><h3 className="tl-title">Engineering & AI Development</h3><p className="tl-text">18-person team across four tracks: AI model training (12 models, 2M+ medical images), backend, frontend, and EMR integrations with Epic, Oracle Health, and Meditech.</p></div></div>
-      <div className="tl-item rv" style={{ transitionDelay: ".18s" }}><div className="tl-dot">🚀</div><div className="tl-body"><div className="tl-step">Phase 05 · Month 18</div><h3 className="tl-title">Deployment & Scale</h3><p className="tl-text">Blue-green rollout across 500+ hospitals with zero downtime. 12,000 clinical staff trained in 90 days. Continuous anomaly detection ensures 99.99% uptime.</p></div></div>
+      {projectDetail.timeline.map((item, index) => (
+        <div className="tl-item rv" style={{ transitionDelay: `${index * 0.05}s` }} key={item.title}><div className="tl-dot">{item.icon}</div><div className="tl-body"><div className="tl-step">{item.step}</div><h3 className="tl-title">{item.title}</h3><p className="tl-text">{item.text}</p></div></div>
+      ))}
     </div>
   </div>
 </section>
@@ -536,30 +564,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     <div className="gallery-scroll-container">
         <div className="gallery-header">
             {/* <span>VISUAL IDENTITY</span> */}
-            <h2>Brand Showcase</h2>
-            <p>Observe the fluid left-to-right scroll reveal transition on each visual asset.</p>
+            <h2>{projectDetail.galleryTitle}</h2>
+            <p>{projectDetail.galleryDescription}</p>
         </div>
 
         <div className="stacked-reveal-gallery">
-            {/* Image 1 */}
-            <div className="reveal-img-container">
-                <img src="/Images/Gemini_Generated_Image_39dgf639dgf639dg.png" alt="Brand Asset 01" />
-            </div>
-
-            {/* Image 2 */}
-            <div className="reveal-img-container">
-                <img src="/Images/Gemini_Generated_Image_4wbmmb4wbmmb4wbm.png" alt="Brand Asset 02" />
-            </div>
-
-            {/* Image 3 */}
-            <div className="reveal-img-container">
-                <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="Brand Asset 03" />
-            </div>
-
-            {/* Image 4 */}
-            <div className="reveal-img-container">
-                <img src="/Images/Gemini_Generated_Image_5iyked5iyked5iyk.png" alt="Brand Asset 04" />
-            </div>
+            {projectDetail.galleryImages.map(image => (
+              <div className="reveal-img-container" key={image.src}>
+                <img src={image.src} alt={image.alt} />
+              </div>
+            ))}
         </div>
     </div>
 
@@ -574,42 +588,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 {/* ══ RESULTS — IMPACT ══ */}
 <section className="proj-results" id="results">
   <div className="wrap impact-showcase">
-    <h2 className="impact-title rv">Impact <span className="muted">Results</span></h2>
+    <h2 className="impact-title rv">{projectDetail.impactTitle} <span className="muted">{projectDetail.impactAccent}</span></h2>
     <div className="impact-card-grid" aria-label="Impact result metrics">
-      <div className="impact-metric-card rv" style={{ transitionDelay: ".1s" }} aria-label="Improved diagnostic errors from ten times to forty percent fewer errors">
-        <span className="impact-metric-label">Diagnostic Errors</span>
-        <div className="impact-metric-row">
-          <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">10×</span></span>
-          <span className="impact-arrow" aria-hidden="true">→</span>
-          <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after counter" data-t="40" data-s="%">40%</span></span>
+      {projectDetail.impactMetrics.map((metric, index) => (
+        <div className="impact-metric-card rv" style={{ transitionDelay: `${0.1 + index * 0.06}s` }} aria-label={`${metric.label} improved from ${metric.before} to ${metric.after}`} key={metric.label}>
+          <span className="impact-metric-label">{metric.label}</span>
+          <div className="impact-metric-row">
+            <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">{metric.before}</span></span>
+            <span className="impact-arrow" aria-hidden="true">→</span>
+            <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after counter" data-p={metric.prefix || ''} data-t={metric.target} data-s={metric.suffix || ''}>{metric.after}</span></span>
+          </div>
         </div>
-      </div>
-      <div className="impact-metric-card rv" style={{ transitionDelay: ".16s" }} aria-label="Reporting improved from one times to three times faster">
-        <span className="impact-metric-label">Reporting Speed</span>
-        <div className="impact-metric-row">
-          <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">1×</span></span>
-          <span className="impact-arrow" aria-hidden="true">→</span>
-          <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after counter" data-t="3" data-s="×">3×</span></span>
-        </div>
-      </div>
-      <div className="impact-metric-card rv" style={{ transitionDelay: ".22s" }} aria-label="Annual savings improved from zero million to twelve million dollars">
-        <span className="impact-metric-label">Annual Savings</span>
-        <div className="impact-metric-row">
-          <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">$0</span></span>
-          <span className="impact-arrow" aria-hidden="true">→</span>
-          <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after counter" data-p="$" data-t="12" data-s="M">$12M</span></span>
-        </div>
-      </div>
-      <div className="impact-metric-card rv" style={{ transitionDelay: ".28s" }} aria-label="Hospital rollout improved from one hospital to five hundred plus hospitals">
-        <span className="impact-metric-label">Hospitals Connected</span>
-        <div className="impact-metric-row">
-          <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">1</span></span>
-          <span className="impact-arrow" aria-hidden="true">→</span>
-          <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after counter" data-t="500" data-s="+">500+</span></span>
-        </div>
-      </div>
+      ))}
     </div>
-    {/* <p className="impact-copy rv" style={{ transitionDelay: ".18s" }}>Fewer diagnostic errors after launching the AI-assisted healthcare platform.</p> */}
   </div>
 </section>
 
@@ -629,72 +620,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     {/* <div className="sec-label rv"><span className="dot"></span> More Case Studies</div> */}
     <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s" }}>Explore <span className="grad">related work</span></h2>
     <div className="sim-grid">
-      <a href="/project/seo" className="project-card">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost SEO Campaign" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">SEO</span>
-              </div>
+      {projectDetail.related.map(project => (
+        <a href={`/project/${project.id}`} className="project-card" key={project.id}>
+          <div className="card-visual">
+            <div className="card-image-wrapper">
+              {project.image ? <img src={project.image} alt={project.title} loading="lazy" /> : <div className="card-placeholder"><span className="placeholder-icon">✨</span></div>}
+              <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{project.category}</span></div></div>
             </div>
           </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">OrganicBoost SEO Campaign</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">SEO</span>
-              <span className="tag">Branding</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-      <a href="/project/ecommerce" className="project-card">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">UI/UX</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">LuxeStore Commerce</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">UI/UX</span>
-              <span className="tag">E-commerce</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-      <a href="/project/branding" className="project-card">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty Rebrand" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Branding</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">Zenith Realty Rebrand</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Branding</span>
-              <span className="tag">Web Design</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
+          <div className="card-info"><h3 className="card-title">{project.title}</h3><div className="meta-container"><div className="card-tags">{project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}</div><div className="show-project-view">Show Project</div></div></div>
+        </a>
+      ))}
     </div>
   </div>
 </section>

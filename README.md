@@ -44,3 +44,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 npm run dev
 ```
 
 The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts either an array response or an object containing `data`, `portfolio`, or `projects`. Supported project fields include `title`/`name`, `slug`/`id`, `category`, `tags`/`technologies`/`services`, and `image`/`imageUrl`/`thumbnail`/`coverImage`.
+
+Additional dynamic sections now use the same backend base URL:
+
+- `GET <NEXT_PUBLIC_BACKEND_URL>/api/home` may provide `impact`, `impactStats`, `stats`, or `metrics` for the home impact counters and `logos`, `clients`, or `brands` for the home logo carousel.
+- `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio/:id` may provide full project detail content for the project page, including hero fields, `meta`, overview copy/cards, `timeline`/`process`, `galleryImages`, `impactMetrics`/`results`, and `related` projects.
