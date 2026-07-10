@@ -15,9 +15,43 @@ export type PortfolioFeedback = {
 
 export type PortfolioImpactMetric = {
   value: number;
+  displayValue: string;
   suffix: string;
   label: string;
   sub: string;
+};
+
+export type HomeHeroContent = {
+  eyebrow: string;
+  title: string;
+  highlight: string;
+  subtitle: string;
+  primaryLabel: string;
+  primaryHref: string;
+  primaryIcon: string;
+  secondaryLabel: string;
+  secondaryHref: string;
+  secondaryIcon: string;
+};
+
+export type ContactSectionContent = {
+  heading: string;
+  highlight: string;
+  buttonLabel: string;
+  buttonHref: string;
+};
+
+export type ClientLogo = {
+  id: string;
+  name: string;
+  image: string;
+};
+
+export type SocialLink = {
+  id: string;
+  platform: string;
+  href: string;
+  icon?: string;
 };
 
 export type PortfolioProcessStep = {
@@ -73,10 +107,47 @@ export const fallbackPortfolioProjects: PortfolioProject[] = [
 const getBackendBaseUrl = (): string => process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '') || '';
 
 export const fallbackImpactMetrics: PortfolioImpactMetric[] = [
-  { value: 10, suffix: '+', label: 'Years of Experience', sub: 'Delivering results since 2018' },
-  { value: 200, suffix: '+', label: 'Clients Served', sub: 'Across 8+ industries globally' },
-  { value: 50, suffix: '+', label: 'Projects Delivered', sub: 'On time, on budget, on point' },
-  { value: 8, suffix: '+', label: 'Industries Covered', sub: 'Focused expertise across growth sectors' },
+  { value: 10, displayValue: '10+', suffix: '+', label: 'Years of Experience', sub: 'Delivering results since 2018' },
+  { value: 200, displayValue: '200+', suffix: '+', label: 'Clients Served', sub: 'Across 8+ industries globally' },
+  { value: 50, displayValue: '50+', suffix: '+', label: 'Projects Delivered', sub: 'On time, on budget, on point' },
+  { value: 8, displayValue: '8+', suffix: '+', label: 'Industries Covered', sub: 'Focused expertise across growth sectors' },
+];
+
+export const fallbackHomeHeroContent: HomeHeroContent = {
+  eyebrow: 'Digital Agency · Est. 2018',
+  title: 'We Make Digital Matter.',
+  highlight: 'Digital',
+  subtitle: 'From SEO-driven growth strategies to full-scale enterprise software — Revti Digital builds things that perform.',
+  primaryLabel: 'View Our Work',
+  primaryHref: '#portfolio',
+  primaryIcon: 'fa-arrow-down',
+  secondaryLabel: 'Start a Project',
+  secondaryHref: '#contact',
+  secondaryIcon: 'fa-paper-plane',
+};
+
+export const fallbackContactSectionContent: ContactSectionContent = {
+  heading: "Let's Create Something Together",
+  highlight: 'Together',
+  buttonLabel: 'Get In Touch!',
+  buttonHref: 'mailto:hello@revtidigital.com',
+};
+
+export const fallbackClientLogos: ClientLogo[] = [
+  'Apollo Health',
+  'Zenith Realty',
+  'LuxeStore',
+  'OrganicBoost',
+  'FinEdge',
+  'IndustrIQ',
+  'NovaBrand',
+  'FoodieHub',
+].map((name) => ({ id: name, name, image: '' }));
+
+export const fallbackSocialLinks: SocialLink[] = [
+  { id: 'instagram', platform: 'Instagram', href: '#', icon: 'fa-instagram' },
+  { id: 'twitter', platform: 'Twitter/X', href: '#', icon: 'fa-twitter' },
+  { id: 'linkedin', platform: 'LinkedIn', href: '#', icon: 'fa-linkedin' },
 ];
 
 const getStringValue = (source: any, keys: string[]): string => {
@@ -104,6 +175,12 @@ const resolveAssetUrl = (value: string): string => {
 
   const apiBaseUrl = getBackendBaseUrl();
   return apiBaseUrl ? `${apiBaseUrl}/${value.replace(/^\/+/, '')}` : value;
+};
+
+const splitMetricDisplayValue = (displayValue: string) => {
+  const match = displayValue.trim().match(/^(-?\d+(?:\.\d+)?)(.*)$/);
+  if (!match) return { value: 0, suffix: '' };
+  return { value: Number(match[1]), suffix: match[2] || '' };
 };
 
 const getNumberValue = (source: any, keys: string[]): number | null => {
@@ -271,28 +348,38 @@ export const fetchPortfolioProjects = async (): Promise<PortfolioProject[]> => {
 export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Promise<PortfolioImpactMetric[]> => {
   const normalizeMetric = (item: any): PortfolioImpactMetric | null => {
     const label = getStringValue(item, ['label', 'title', 'name']);
-    const value = getNumberValue(item, ['value', 'num', 'number', 'count']);
-    if (!label || value === null) return null;
+    const rawDisplayValue = getStringValue(item, ['value', 'num', 'number', 'count']);
+    const parsedDisplayValue = splitMetricDisplayValue(rawDisplayValue);
+    const value = getNumberValue(item, ['target', 'numeric_value', 'numericValue']) ?? parsedDisplayValue.value;
+    const suffix = getStringValue(item, ['suffix']) || parsedDisplayValue.suffix;
+    if (!label || !rawDisplayValue) return null;
     return {
       value,
-      suffix: getStringValue(item, ['suffix']) || '',
+      displayValue: `${value}${suffix}` || rawDisplayValue,
+      suffix,
       label,
-      sub: getStringValue(item, ['sub', 'subtitle', 'description', 'text']),
+      sub: getStringValue(item, ['short_desc', 'shortDesc', 'sub', 'subtitle', 'description', 'text']),
     };
   };
 
-  try {
-    const { data, error } = await supabase
-      .from('impact_metrics')
-      .select('*')
-      .order('sequence', { ascending: true });
+  for (const { table, order } of [
+    { table: 'impact_numbers', order: 'display_order' },
+    { table: 'homepage_stats', order: 'sequence' },
+    { table: 'impact_metrics', order: 'sequence' },
+  ]) {
+    try {
+      const { data, error } = await supabase.from(table).select('*').order(order, { ascending: true });
 
-    if (!error && data?.length) {
-      const metrics = data.map(normalizeMetric).filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
-      if (metrics.length) return metrics;
+      if (!error && data?.length) {
+        const metrics = data
+          .filter((item: any) => item?.is_active !== false && item?.active !== false && !item?.deleted_at)
+          .map(normalizeMetric)
+          .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
+        if (metrics.length) return metrics;
+      }
+    } catch {
+      // Try the next known stats table name, then fall back below.
     }
-  } catch (err) {
-    console.warn('Unable to fetch impact_metrics from Supabase; deriving home impact metrics from projects.', err);
   }
 
   if (!projects.length) return fallbackImpactMetrics;
@@ -304,9 +391,96 @@ export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Pro
   const industries = new Set(projects.map(project => project.industry || project.category).filter(Boolean));
 
   return [
-    { value: Math.max(1, currentYear - earliestYear + 1), suffix: '+', label: 'Years of Experience', sub: `Delivering results since ${earliestYear}` },
-    { value: clients.size || projects.length, suffix: '+', label: 'Clients Served', sub: `Across ${industries.size || 1}+ industries globally` },
-    { value: projects.length, suffix: '+', label: 'Projects Delivered', sub: 'On time, on budget, on point' },
-    { value: industries.size || 1, suffix: '+', label: 'Industries Covered', sub: 'Focused expertise across growth sectors' },
+    { value: Math.max(1, currentYear - earliestYear + 1), displayValue: `${Math.max(1, currentYear - earliestYear + 1)}+`, suffix: '+', label: 'Years of Experience', sub: `Delivering results since ${earliestYear}` },
+    { value: clients.size || projects.length, displayValue: `${clients.size || projects.length}+`, suffix: '+', label: 'Clients Served', sub: `Across ${industries.size || 1}+ industries globally` },
+    { value: projects.length, displayValue: `${projects.length}+`, suffix: '+', label: 'Projects Delivered', sub: 'On time, on budget, on point' },
+    { value: industries.size || 1, displayValue: `${industries.size || 1}+`, suffix: '+', label: 'Industries Covered', sub: 'Focused expertise across growth sectors' },
   ];
+};
+
+const getSiteSettingValue = async (key: string): Promise<any | null> => {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', key)
+    .single();
+
+  if (error) return null;
+  return data?.value || null;
+};
+
+export const fetchHomeHeroContent = async (): Promise<HomeHeroContent> => {
+  const value = await getSiteSettingValue('hero_section');
+  if (!value) return fallbackHomeHeroContent;
+
+  const buttons = Array.isArray(value.buttons) ? value.buttons : [];
+  const primaryButton = buttons[0] || {};
+  const secondaryButton = buttons[1] || {};
+
+  return {
+    eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']) || fallbackHomeHeroContent.eyebrow,
+    title: getStringValue(value, ['heading', 'title', 'headline']) || fallbackHomeHeroContent.title,
+    highlight: getStringValue(value, ['heading_highlight', 'highlight', 'title_highlight']) || fallbackHomeHeroContent.highlight,
+    subtitle: getStringValue(value, ['sub_heading', 'subtitle', 'subTitle', 'description', 'text']) || fallbackHomeHeroContent.subtitle,
+    primaryLabel: getStringValue(primaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.primaryLabel,
+    primaryHref: getStringValue(primaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.primaryHref,
+    primaryIcon: getStringValue(primaryButton, ['icon']) || fallbackHomeHeroContent.primaryIcon,
+    secondaryLabel: getStringValue(secondaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.secondaryLabel,
+    secondaryHref: getStringValue(secondaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.secondaryHref,
+    secondaryIcon: getStringValue(secondaryButton, ['icon']) || fallbackHomeHeroContent.secondaryIcon,
+  };
+};
+
+export const fetchContactSectionContent = async (): Promise<ContactSectionContent> => {
+  const value = await getSiteSettingValue('contact_section');
+  if (!value) return fallbackContactSectionContent;
+  const button = value.button || {};
+
+  return {
+    heading: getStringValue(value, ['heading', 'title']) || fallbackContactSectionContent.heading,
+    highlight: getStringValue(value, ['heading_highlight', 'highlight']) || fallbackContactSectionContent.highlight,
+    buttonLabel: getStringValue(button, ['text', 'label', 'title']) || fallbackContactSectionContent.buttonLabel,
+    buttonHref: getStringValue(button, ['link', 'href', 'url']) || fallbackContactSectionContent.buttonHref,
+  };
+};
+
+export const fetchClientLogos = async (): Promise<ClientLogo[]> => {
+  const { data, error } = await supabase
+    .from('client_logos')
+    .select('id, client_name, logo_image, display_order, is_active, deleted_at')
+    .order('display_order', { ascending: true });
+
+  if (error || !data?.length) return fallbackClientLogos;
+
+  const logos = data
+    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
+    .map((item: any) => ({
+      id: getStringValue(item, ['id']) || getStringValue(item, ['client_name']),
+      name: getStringValue(item, ['client_name']) || 'Client logo',
+      image: resolveAssetUrl(getStringValue(item, ['logo_image'])),
+    }))
+    .filter(logo => logo.id && (logo.name || logo.image));
+
+  return logos.length ? logos : fallbackClientLogos;
+};
+
+export const fetchSocialLinks = async (): Promise<SocialLink[]> => {
+  const { data, error } = await supabase
+    .from('social_links')
+    .select('id, platform, profile_url, icon, display_order, is_active, deleted_at')
+    .order('display_order', { ascending: true });
+
+  if (error || !data?.length) return fallbackSocialLinks;
+
+  const links = data
+    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
+    .map((item: any) => ({
+      id: getStringValue(item, ['id']) || getStringValue(item, ['platform']),
+      platform: getStringValue(item, ['platform']),
+      href: getStringValue(item, ['profile_url']),
+      icon: getStringValue(item, ['icon']),
+    }))
+    .filter(link => link.id && link.platform && link.href);
+
+  return links.length ? links : fallbackSocialLinks;
 };
