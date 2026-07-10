@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export type PortfolioStat = {
   num?: string;
   label?: string;
@@ -168,7 +170,12 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     approach: getStringValue(item, ['approach']),
     impact: getStringValue(item, ['impact']),
     compliance: getStringValue(item, ['compliance']),
-    process: asJsonArray<PortfolioProcessStep>(item?.process),
+    process: asJsonArray<any>(item?.process).map((p: any) => ({
+      icon: p?.icon || '✨',
+      step: getStringValue(p, ['phase', 'step']),
+      title: getStringValue(p, ['title']),
+      text: getStringValue(p, ['description', 'text']),
+    })),
     icon: '✨',
     placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
   };
@@ -182,4 +189,28 @@ export const extractPortfolioProjects = (payload: any) => {
 export const getPortfolioApiUrl = (path = '/api/portfolio') => {
   const apiBaseUrl = getBackendBaseUrl();
   return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
+};
+
+export const fetchPortfolioProjects = async (): Promise<PortfolioProject[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('status', 'published')
+      .order('sequence', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching projects from Supabase:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) return [];
+
+    return data
+      .map((item, index) => normalizePortfolioProject(item, index))
+      .filter((project): project is PortfolioProject => Boolean(project));
+  } catch (err) {
+    console.error('Unexpected error fetching projects from Supabase:', err);
+    return [];
+  }
 };

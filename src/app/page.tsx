@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { extractPortfolioProjects, fallbackPortfolioProjects, getPortfolioApiUrl, type PortfolioProject } from '@/lib/portfolio';
+import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
 
 export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
@@ -14,31 +14,24 @@ export default function HomePage() {
   }, [portfolioProjects]);
 
   useEffect(() => {
-    const portfolioApiUrl = getPortfolioApiUrl();
-    if (!portfolioApiUrl) return;
-
-    const controller = new AbortController();
+    let active = true;
 
     async function loadPortfolioProjects() {
       try {
-        const response = await fetch(portfolioApiUrl, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Portfolio request failed with ${response.status}`);
-        const payload = await response.json();
-        const nextProjects = extractPortfolioProjects(payload);
-
-        if (nextProjects.length) {
+        const nextProjects = await fetchPortfolioProjects();
+        if (active && nextProjects.length) {
           setPortfolioProjects(nextProjects);
         }
       } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.error('Unable to load portfolio projects from backend.', error);
-        }
+        console.error('Unable to load portfolio projects from Supabase.', error);
       }
     }
 
     loadPortfolioProjects();
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

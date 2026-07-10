@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { extractPortfolioProjects, fallbackPortfolioProjects, getPortfolioApiUrl, type PortfolioProject } from '@/lib/portfolio';
+import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -21,30 +21,26 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     const fallbackProject = fallbackPortfolioProjects.find(item => item.id === id) || fallbackPortfolioProjects[0];
     setProject(fallbackProject);
 
-    const portfolioApiUrl = getPortfolioApiUrl();
-    if (!portfolioApiUrl) return;
-
-    const controller = new AbortController();
+    let active = true;
 
     async function loadPortfolioProjects() {
       try {
-        const response = await fetch(portfolioApiUrl, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Portfolio request failed with ${response.status}`);
-        const payload = await response.json();
-        const nextProjects = extractPortfolioProjects(payload);
+        const nextProjects = await fetchPortfolioProjects();
         if (!nextProjects.length) return;
-        setProjects(nextProjects);
-        setProject(nextProjects.find(item => item.id === id) || nextProjects[0]);
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.error('Unable to load portfolio project from backend.', error);
+        if (active) {
+          setProjects(nextProjects);
+          setProject(nextProjects.find(item => item.id === id) || nextProjects[0]);
         }
+      } catch (error) {
+        console.error('Unable to load portfolio project from Supabase.', error);
       }
     }
 
     loadPortfolioProjects();
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   useEffect(() => {
