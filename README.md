@@ -43,4 +43,25 @@ Only the portfolio sections read from the backend: the home-page gallery, portfo
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 npm run dev
 ```
 
-The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts either an array response or an object containing `data`, `portfolio`, or `projects`. It maps the backend portfolio/project fields including `id`, `cat`, `year`, `title`, `client`, `tagline`, `headline`, `desc`, `shortDesc`, `tags`, `thumb`, `gallery`, `stats`, `industry`, `sprint`, `overview_title`, `challenge`, `approach`, `impact`, `compliance`, and `process`, while keeping fallback content if the backend is unavailable.
+The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts an array response or common wrapped responses such as `data`, `portfolio`, `projects`, `items`, `results`, `docs`, and nested `data.projects` / `data.docs`. It maps the backend portfolio/project fields including `id`, `slug`, `_id`, `cat`, `category`, `type`, `portfolioCategory`, `year`, `title`, `name`, `projectTitle`, `clientName`, `client`, `tagline`, `headline`, `desc`, `description`, `shortDesc`, `shortDescription`, `excerpt`, `tags`, `technologies`, `services`, `skills`, `thumb`, `image`, `imageUrl`, `thumbnail`, `thumbnailUrl`, `coverImage`, `coverImageUrl`, `gallery`, `stats`, `industry`, `sprint`, `overview_title`, `overviewTitle`, `challenge`, `approach`, `impact`, `compliance`, and `process`, while keeping fallback content if the backend is unavailable.
+
+For a backend-created project to show after saving, the API response must include at least one title field (`title`, `name`, `projectTitle`, or `clientName`). If an image or gallery item is saved as an object, the frontend reads `url`, `src`, `path`, `secure_url`, or `location`. Relative backend asset paths like `/uploads/example.jpg` are expanded with `NEXT_PUBLIC_BACKEND_URL`.
+
+Example portfolio project payload:
+
+```json
+{
+  "slug": "revti-brand-launch",
+  "title": "Revti Brand Launch",
+  "category": "Branding",
+  "year": "2026",
+  "client": "Revti",
+  "tagline": "A launch campaign for a modern digital brand.",
+  "description": "Long project overview shown on the project detail page.",
+  "tags": ["Brand Identity", "Campaign", "Design"],
+  "coverImageUrl": "/uploads/revti-brand-launch.jpg",
+  "gallery": [{ "url": "/uploads/revti-gallery-1.jpg" }],
+  "stats": [{ "num": "3x", "label": "Reach" }],
+  "process": [{ "step": "01", "title": "Discovery", "text": "Research and strategy." }]
+}
+```
