@@ -3,40 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-<<<<<<< HEAD
-import { 
-  fetchPortfolioProjects, 
-  fallbackPortfolioProjects, 
-  fetchClientLogos, 
-  fetchImpactNumbers, 
-  type PortfolioProject, 
-  type ClientLogo, 
-  type ImpactNumber 
-} from '@/lib/portfolio';
-
-const fallbackImpactNumbers: ImpactNumber[] = [
-  { id: '1', number: 10, suffix: '+', title: 'Years of Experience', shortDesc: 'Delivering results since 2018', displayOrder: 1 },
-  { id: '2', number: 200, suffix: '+', title: 'Clients Served', shortDesc: 'Across 8+ industries globally', displayOrder: 2 },
-  { id: '3', number: 50, suffix: '+', title: 'Projects Delivered', shortDesc: 'On time, on budget, on point', displayOrder: 3 },
-  { id: '4', number: 8, suffix: '+', title: 'Industries Covered', shortDesc: 'Focused expertise across growth sectors', displayOrder: 4 },
-];
-
-const fallbackClientLogos: ClientLogo[] = [
-  { id: '1', clientName: 'Apollo Health', logoImage: '', displayOrder: 1 },
-  { id: '2', clientName: 'Zenith Realty', logoImage: '', displayOrder: 2 },
-  { id: '3', clientName: 'LuxeStore', logoImage: '', displayOrder: 3 },
-  { id: '4', clientName: 'OrganicBoost', logoImage: '', displayOrder: 4 },
-  { id: '5', clientName: 'FinEdge', logoImage: '', displayOrder: 5 },
-  { id: '6', clientName: 'IndustrIQ', logoImage: '', displayOrder: 6 },
-  { id: '7', clientName: 'NovaBrand', logoImage: '', displayOrder: 7 },
-  { id: '8', clientName: 'FoodieHub', logoImage: '', displayOrder: 8 },
-];
-
-export default function HomePage() {
-  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
-  const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
-  const [impactNumbers, setImpactNumbers] = useState<ImpactNumber[]>(fallbackImpactNumbers);
-=======
 import { fetchClientLogos, fetchContactSectionContent, fetchHomeHeroContent, fetchImpactMetrics, fetchPortfolioProjects, fetchSocialLinks, fallbackClientLogos, fallbackContactSectionContent, fallbackHomeHeroContent, fallbackImpactMetrics, fallbackPortfolioProjects, fallbackSocialLinks, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
 import { supabase } from '@/lib/supabase';
 
@@ -63,7 +29,6 @@ export default function HomePage() {
   const [contactContent, setContactContent] = useState<ContactSectionContent>(fallbackContactSectionContent);
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks);
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
 
   const portfolioCategories = useMemo(() => {
     const categories = portfolioProjects.map(project => project.category).filter(Boolean);
@@ -73,20 +38,6 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
-<<<<<<< HEAD
-    async function loadAllData() {
-      try {
-        const [nextProjects, nextLogos, nextImpacts] = await Promise.all([
-          fetchPortfolioProjects(),
-          fetchClientLogos(),
-          fetchImpactNumbers()
-        ]);
-        
-        if (active) {
-          if (nextProjects.length) setPortfolioProjects(nextProjects);
-          if (nextLogos.length) setClientLogos(nextLogos);
-          if (nextImpacts.length) setImpactNumbers(nextImpacts);
-=======
     async function loadHomeContent() {
       try {
         const [nextProjects, nextHeroContent, nextContactContent, nextClientLogos, nextSocialLinks] = await Promise.all([
@@ -99,7 +50,6 @@ export default function HomePage() {
         const projectsForMetrics = nextProjects.length ? nextProjects : fallbackPortfolioProjects;
         if (active && nextProjects.length) {
           setPortfolioProjects(nextProjects);
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
         }
 
         if (active) {
@@ -114,13 +64,10 @@ export default function HomePage() {
           setImpactMetrics(nextImpactMetrics);
         }
       } catch (error) {
-        console.error('Unable to load data from Supabase.', error);
+        console.error('Unable to load portfolio projects from Supabase.', error);
       }
     }
 
-<<<<<<< HEAD
-    loadAllData();
-=======
     loadHomeContent();
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -140,7 +87,6 @@ export default function HomePage() {
       .subscribe();
 
     const pollingFallback = window.setInterval(loadHomeContent, 15000);
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
 
     return () => {
       active = false;
@@ -176,10 +122,10 @@ export default function HomePage() {
         }
       });
 
-      // Portfolio header reveal
-      gsap.fromTo('.portfolio-header', { opacity: 0, y: 40 }, {
+      // Gallery header reveal
+      gsap.fromTo('.gallery-sec-hdr', { opacity: 0, y: 40 }, {
         opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.portfolio-header', start: 'top 80%', once: true }
+        scrollTrigger: { trigger: '.gallery-sec-hdr', start: 'top 80%', once: true }
       });
 
       // Entrance animation for project cards
@@ -480,21 +426,11 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
-<<<<<<< HEAD
-      {impactNumbers.map((item, index) => (
-        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={item.id}>
-          <span className="impact-num counter" data-t={item.number} data-s={item.suffix}>
-            {item.number}{item.suffix}
-          </span>
-          <div className="impact-label">{item.title}</div>
-          <div className="impact-sub">{item.shortDesc}</div>
-=======
       {impactMetrics.map((metric, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={`${metric.label}-${index}`}>
           <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
           <div className="impact-label">{metric.label}</div>
           {metric.sub && <div className="impact-sub">{metric.sub}</div>}
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
         </div>
       ))}
     </div>
@@ -570,50 +506,6 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
-<<<<<<< HEAD
-      {clientLogos.map((logo, index) => {
-        const hasImage = logo.logoImage && (logo.logoImage.startsWith('http') || logo.logoImage.startsWith('/'));
-        return (
-          <div className="client-logo-card" key={`logo-a-${logo.id}-${index}`} aria-label={logo.clientName}>
-            {hasImage ? (
-              <img 
-                src={logo.logoImage} 
-                alt={logo.clientName} 
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const textEl = e.currentTarget.parentElement?.querySelector('.logo-text');
-                  if (textEl) (textEl as HTMLElement).style.display = 'block';
-                }} 
-              />
-            ) : null}
-            <span className="logo-text" style={{ display: hasImage ? 'none' : 'block' }}>
-              {logo.clientName}
-            </span>
-          </div>
-        );
-      })}
-      {clientLogos.map((logo, index) => {
-        const hasImage = logo.logoImage && (logo.logoImage.startsWith('http') || logo.logoImage.startsWith('/'));
-        return (
-          <div className="client-logo-card" key={`logo-b-${logo.id}-${index}`} aria-hidden="true">
-            {hasImage ? (
-              <img 
-                src={logo.logoImage} 
-                alt={logo.clientName} 
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const textEl = e.currentTarget.parentElement?.querySelector('.logo-text');
-                  if (textEl) (textEl as HTMLElement).style.display = 'block';
-                }} 
-              />
-            ) : null}
-            <span className="logo-text" style={{ display: hasImage ? 'none' : 'block' }}>
-              {logo.clientName}
-            </span>
-          </div>
-        );
-      })}
-=======
       {clientLogos.map((logo) => (
         <div className="client-logo-card" key={`logo-a-${logo.id}`} aria-label={logo.name}>
           {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
@@ -624,7 +516,6 @@ export default function HomePage() {
           {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
         </div>
       ))}
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
     </div>
   </div>
 </section>

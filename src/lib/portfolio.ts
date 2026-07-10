@@ -345,78 +345,6 @@ export const fetchPortfolioProjects = async (): Promise<PortfolioProject[]> => {
   }
 };
 
-<<<<<<< HEAD
-export type ClientLogo = {
-  id: string;
-  clientName: string;
-  logoImage: string;
-  displayOrder: number;
-};
-
-export type ImpactNumber = {
-  id: string;
-  number: number;
-  suffix: string;
-  title: string;
-  shortDesc: string;
-  displayOrder: number;
-};
-
-export const fetchClientLogos = async (): Promise<ClientLogo[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('client_logos')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching client logos from Supabase:', error);
-      return [];
-    }
-
-    if (!data) return [];
-
-    return data.map((item: any) => ({
-      id: item.id,
-      clientName: item.client_name,
-      logoImage: item.logo_image,
-      displayOrder: item.display_order
-    }));
-  } catch (err) {
-    console.error('Unexpected error fetching client logos from Supabase:', err);
-    return [];
-  }
-};
-
-export const fetchImpactNumbers = async (): Promise<ImpactNumber[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('impact_numbers')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching impact numbers from Supabase:', error);
-      return [];
-    }
-
-    if (!data) return [];
-
-    return data.map((item: any) => ({
-      id: item.id,
-      number: item.number,
-      suffix: item.suffix || '',
-      title: item.title,
-      shortDesc: item.short_desc || '',
-      displayOrder: item.display_order
-    }));
-  } catch (err) {
-    console.error('Unexpected error fetching impact numbers from Supabase:', err);
-    return [];
-  }
-=======
 export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Promise<PortfolioImpactMetric[]> => {
   const normalizeMetric = (item: any): PortfolioImpactMetric | null => {
     const label = getStringValue(item, ['label', 'title', 'name']);
@@ -555,5 +483,5 @@ export const fetchSocialLinks = async (): Promise<SocialLink[]> => {
     .filter(link => link.id && link.platform && link.href);
 
   return links.length ? links : fallbackSocialLinks;
->>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
 };
+
