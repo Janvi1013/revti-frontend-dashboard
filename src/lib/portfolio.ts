@@ -51,18 +51,55 @@ export const fallbackPortfolioProjects: PortfolioProject[] = [
   { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))', gallery: [], stats: [], process: [] },
 ];
 
-const getStringValue = (source: any, keys: string[]) => {
+const getBackendBaseUrl = (): string => process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '') || '';
+
+const getStringValue = (source: any, keys: string[]): string => {
   for (const key of keys) {
     const value = source?.[key];
     if (typeof value === 'string' && value.trim()) return value.trim();
     if (typeof value === 'number') return String(value);
+    if (value && typeof value === 'object') {
+      const nestedValue = getStringValue(value, ['url', 'src', 'path', 'secure_url', 'location', 'name', 'title', 'label', 'text']);
+      if (nestedValue) return nestedValue;
+    }
   }
   return '';
 };
 
-const asStringArray = (value: any) => {
-  if (Array.isArray(value)) return value.map(item => typeof item === 'string' ? item : getStringValue(item, ['name', 'title', 'label', 'text'])).filter(Boolean);
-  if (typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean);
+const resolveAssetUrl = (value: string): string => {
+  if (!value) return '';
+  if (/^(https?:|data:|blob:|\/)/.test(value)) {
+    if (value.startsWith('/uploads') || value.startsWith('/media') || value.startsWith('/storage')) {
+      const apiBaseUrl = getBackendBaseUrl();
+      return apiBaseUrl ? `${apiBaseUrl}${value}` : value;
+    }
+    return value;
+  }
+
+  const apiBaseUrl = getBackendBaseUrl();
+  return apiBaseUrl ? `${apiBaseUrl}/${value.replace(/^\/+/, '')}` : value;
+};
+
+const asStringArray = (value: any): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => typeof item === 'string' ? item : getStringValue(item, ['url', 'src', 'path', 'secure_url', 'location', 'name', 'title', 'label', 'text']))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith('[')) {
+      try {
+        return asStringArray(JSON.parse(trimmed));
+      } catch {
+        return [];
+      }
+    }
+
+    return trimmed.split(',').map(item => item.trim()).filter(Boolean);
+  }
   return [];
 };
 
@@ -79,6 +116,26 @@ const asJsonArray = <T>(value: any): T[] => {
   return [];
 };
 
+const getRawPortfolioProjects = (payload: any): any[] => {
+  const candidates = [
+    payload,
+    payload?.data,
+    payload?.portfolio,
+    payload?.projects,
+    payload?.items,
+    payload?.results,
+    payload?.data?.data,
+    payload?.data?.portfolio,
+    payload?.data?.projects,
+    payload?.data?.items,
+    payload?.data?.results,
+    payload?.data?.docs,
+    payload?.docs,
+  ];
+
+  return candidates.find(Array.isArray) || [];
+};
+
 export const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
   const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
   if (!title) return null;
@@ -86,7 +143,8 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const id = getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`;
   const category = getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory']) || 'Portfolio';
   const tags = asStringArray(item?.tags || item?.technologies || item?.services || item?.skills).slice(0, 4);
-  const image = getStringValue(item, ['thumb', 'image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']);
+  const image = resolveAssetUrl(getStringValue(item, ['thumb', 'image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']));
+  const gallery = asStringArray(item?.gallery).map(resolveAssetUrl);
 
   return {
     id,
@@ -101,7 +159,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     tags: tags.length ? tags : ['Case Study'],
     image,
     imageAlt: getStringValue(item, ['imageAlt', 'alt']) || title,
-    gallery: asStringArray(item?.gallery).length ? asStringArray(item?.gallery) : (image ? [image] : []),
+    gallery: gallery.length ? gallery : (image ? [image] : []),
     stats: asJsonArray<PortfolioStat>(item?.stats),
     industry: getStringValue(item, ['industry']),
     sprint: getStringValue(item, ['sprint']),
@@ -117,13 +175,11 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
 };
 
 export const extractPortfolioProjects = (payload: any) => {
-  const rawProjects = Array.isArray(payload) ? payload : payload?.data || payload?.portfolio || payload?.projects || [];
-  return Array.isArray(rawProjects)
-    ? rawProjects.map(normalizePortfolioProject).filter((project): project is PortfolioProject => Boolean(project))
-    : [];
+  const rawProjects = getRawPortfolioProjects(payload);
+  return rawProjects.map(normalizePortfolioProject).filter((project): project is PortfolioProject => Boolean(project));
 };
 
 export const getPortfolioApiUrl = (path = '/api/portfolio') => {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
-  return apiBaseUrl ? `${apiBaseUrl}${path}` : '';
+  const apiBaseUrl = getBackendBaseUrl();
+  return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 };
