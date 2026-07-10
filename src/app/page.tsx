@@ -53,10 +53,10 @@ export default function HomePage() {
         }
 
         if (active) {
-          setHeroContent(nextHeroContent);
-          setContactContent(nextContactContent);
-          setClientLogos(nextClientLogos);
-          setSocialLinks(nextSocialLinks);
+          if (nextHeroContent) setHeroContent(nextHeroContent);
+          if (nextContactContent) setContactContent(nextContactContent);
+          if (nextClientLogos.length) setClientLogos(nextClientLogos);
+          if (nextSocialLinks.length) setSocialLinks(nextSocialLinks);
         }
 
         const nextImpactMetrics = await fetchImpactMetrics(projectsForMetrics);

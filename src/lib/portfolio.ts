@@ -261,7 +261,10 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   if (!title) return null;
 
   const id = getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`;
-  const category = getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory']) || 'Portfolio';
+  const categorySlug = getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory']);
+  const category = categorySlug
+    ? categorySlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : 'Portfolio';
   const tags = asStringArray(item?.tags || item?.technologies || item?.services || item?.skills).slice(0, 4);
   const image = resolveAssetUrl(getStringValue(item, ['thumb', 'image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']));
   const gallery = asStringArray(item?.gallery).map(resolveAssetUrl);
@@ -281,7 +284,12 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     image,
     imageAlt: getStringValue(item, ['imageAlt', 'alt']) || title,
     gallery: gallery.length ? gallery : (image ? [image] : []),
-    stats: asJsonArray<PortfolioStat>(item?.stats),
+    stats: asJsonArray<any>(item?.stats).map((s: any) => ({
+      ...s,
+      num: s.num != null ? String(s.num) : undefined,
+      before: s.before != null ? String(s.before) : undefined,
+      after: s.after != null ? String(s.after) : undefined,
+    })),
     industry: getStringValue(item, ['industry']),
     sprint: getStringValue(item, ['sprint']),
     overviewTitle: getStringValue(item, ['overview_title', 'overviewTitle']),
@@ -414,9 +422,9 @@ const getSiteSettingValue = async (key: string): Promise<any | null> => {
   return data?.value || null;
 };
 
-export const fetchHomeHeroContent = async (): Promise<HomeHeroContent> => {
+export const fetchHomeHeroContent = async (): Promise<HomeHeroContent | null> => {
   const value = await getSiteSettingValue('hero_section');
-  if (!value) return fallbackHomeHeroContent;
+  if (!value) return null;
 
   const buttons = Array.isArray(value.buttons) ? value.buttons : [];
   const primaryButton = buttons[0] || {};
@@ -436,9 +444,9 @@ export const fetchHomeHeroContent = async (): Promise<HomeHeroContent> => {
   };
 };
 
-export const fetchContactSectionContent = async (): Promise<ContactSectionContent> => {
+export const fetchContactSectionContent = async (): Promise<ContactSectionContent | null> => {
   const value = await getSiteSettingValue('contact_section');
-  if (!value) return fallbackContactSectionContent;
+  if (!value) return null;
   const button = value.button || {};
 
   return {
