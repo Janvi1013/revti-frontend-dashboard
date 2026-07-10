@@ -34,3 +34,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Backend portfolio connection
+
+Only the portfolio gallery on the home page reads from the backend. Set the backend base URL before starting the frontend:
+
+```bash
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 npm run dev
+```
+
+The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts either an array response or an object containing `data`, `portfolio`, or `projects`. Supported project fields include `title`/`name`, `slug`/`id`, `category`, `tags`/`technologies`/`services`, and `image`/`imageUrl`/`thumbnail`/`coverImage`.
