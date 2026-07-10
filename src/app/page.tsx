@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
+import { fetchImpactMetrics, fetchPortfolioProjects, fallbackImpactMetrics, fallbackPortfolioProjects, type PortfolioImpactMetric, type PortfolioProject } from '@/lib/portfolio';
 
 export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>(fallbackImpactMetrics);
 
   const portfolioCategories = useMemo(() => {
     const categories = portfolioProjects.map(project => project.category).filter(Boolean);
@@ -19,8 +20,14 @@ export default function HomePage() {
     async function loadPortfolioProjects() {
       try {
         const nextProjects = await fetchPortfolioProjects();
+        const projectsForMetrics = nextProjects.length ? nextProjects : fallbackPortfolioProjects;
         if (active && nextProjects.length) {
           setPortfolioProjects(nextProjects);
+        }
+
+        const nextImpactMetrics = await fetchImpactMetrics(projectsForMetrics);
+        if (active && nextImpactMetrics.length) {
+          setImpactMetrics(nextImpactMetrics);
         }
       } catch (error) {
         console.error('Unable to load portfolio projects from Supabase.', error);
@@ -364,10 +371,13 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
-      <div className="impact-item rv"><span className="impact-num counter" data-t="10" data-s="+">10+</span><div className="impact-label">Years of Experience</div><div className="impact-sub">Delivering results since 2018</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".1s" }}><span className="impact-num counter" data-t="200" data-s="+">200+</span><div className="impact-label">Clients Served</div><div className="impact-sub">Across 8+ industries globally</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".2s" }}><span className="impact-num counter" data-t="50" data-s="+">50+</span><div className="impact-label">Projects Delivered</div><div className="impact-sub">On time, on budget, on point</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".3s" }}><span className="impact-num counter" data-t="8" data-s="+">8+</span><div className="impact-label">Industries Covered</div><div className="impact-sub">Focused expertise across growth sectors</div></div>
+      {impactMetrics.map((metric, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={`${metric.label}-${index}`}>
+          <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.value}{metric.suffix}</span>
+          <div className="impact-label">{metric.label}</div>
+          {metric.sub && <div className="impact-sub">{metric.sub}</div>}
+        </div>
+      ))}
     </div>
   </div>
 </section>
