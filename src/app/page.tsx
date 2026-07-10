@@ -1,10 +1,118 @@
 'use client'
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
+import { fallbackImpactStats, fallbackLogos, normalizeImpactStats, normalizeLogos } from '@/lib/dynamicContent';
+
+type PortfolioProject = {
+  id: string;
+  title: string;
+  category: string;
+  tags: string[];
+  image?: string;
+  imageAlt?: string;
+  icon?: string;
+  placeholderGradient?: string;
+};
+
+const fallbackPortfolioProjects: PortfolioProject[] = [
+  { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty' },
+  { id: 'websites', title: 'Healthcare Platform', category: 'Websites', tags: ['Healthcare', 'SaaS', 'Dashboard'], image: '/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png', imageAlt: 'HealthCore Platform' },
+  { id: 'events', title: 'LuxeStore Commerce', category: 'Events', tags: ['E-Commerce', 'UX Research', 'Design System'], image: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', imageAlt: 'LuxeStore Commerce' },
+  { id: 'nova', title: 'FitTrack Pro', category: 'Publication', tags: ['iOS', 'Android', 'Health'], icon: '📱', placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' },
+  { id: 'mfg', title: 'IndustrIQ IoT Dashboard', category: 'Publication', tags: ['React', 'IoT', 'Real-time'], icon: '🏭', placeholderGradient: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))' },
+  { id: 'seo', title: 'OrganicBoost SEO Campaign', category: 'Websites', tags: ['SEO', 'Marketing', 'Growth'], image: '/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png', imageAlt: 'OrganicBoost' },
+  { id: 'social', title: 'ArtFlow Creative Platform', category: 'Interiors', tags: ['Creative', 'Collaboration', 'SaaS'], icon: '🎨', placeholderGradient: 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))' },
+  { id: 'fintech', title: 'PayWise Finance App', category: 'Packaging', tags: ['Fintech', 'Payments', 'Security'], icon: '💰', placeholderGradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))' },
+  { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))' },
+];
+
+const getStringValue = (source: any, keys: string[]) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+};
+
+const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
+  const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
+  if (!title) return null;
+
+  const rawTags = item?.tags || item?.technologies || item?.services || item?.skills || [];
+  const tags = Array.isArray(rawTags)
+    ? rawTags.map(tag => typeof tag === 'string' ? tag : getStringValue(tag, ['name', 'title'])).filter(Boolean).slice(0, 3)
+    : String(rawTags).split(',').map(tag => tag.trim()).filter(Boolean).slice(0, 3);
+
+  return {
+    id: getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`,
+    title,
+    category: getStringValue(item, ['category', 'type', 'portfolioCategory']) || 'Branding',
+    tags: tags.length ? tags : ['Case Study'],
+    image: getStringValue(item, ['image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']),
+    imageAlt: getStringValue(item, ['imageAlt', 'alt']) || title,
+    icon: '✨',
+    placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
+  };
+};
 
 export default function HomePage() {
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [impactStats, setImpactStats] = useState(fallbackImpactStats);
+  const [logos, setLogos] = useState(fallbackLogos);
+
+  const portfolioCategories = useMemo(() => {
+    const categories = portfolioProjects.map(project => project.category).filter(Boolean);
+    return ['all', ...Array.from(new Set(categories))];
+  }, [portfolioProjects]);
+
+  useEffect(() => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
+    if (!apiBaseUrl) return;
+
+    const controller = new AbortController();
+
+    async function loadHomeContent() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/home`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Home content request failed with ${response.status}`);
+        const payload = await response.json();
+        setImpactStats(normalizeImpactStats(payload));
+        setLogos(normalizeLogos(payload));
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Unable to load home content from backend.', error);
+        }
+      }
+    }
+
+    async function loadPortfolioProjects() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/portfolio`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Portfolio request failed with ${response.status}`);
+        const payload = await response.json();
+        const rawProjects = Array.isArray(payload) ? payload : payload?.data || payload?.portfolio || payload?.projects || [];
+        const nextProjects = Array.isArray(rawProjects)
+          ? rawProjects.map(normalizePortfolioProject).filter((project): project is PortfolioProject => Boolean(project))
+          : [];
+
+        if (nextProjects.length) {
+          setPortfolioProjects(nextProjects);
+        }
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Unable to load portfolio projects from backend.', error);
+        }
+      }
+    }
+
+    loadHomeContent();
+    loadPortfolioProjects();
+
+    return () => controller.abort();
+  }, []);
+
   useEffect(() => {
     // 1. GSAP ScrollTrigger register
     if (typeof window !== 'undefined' && (window as any).gsap && (window as any).ScrollTrigger) {
@@ -15,8 +123,6 @@ export default function HomePage() {
       // GSAP Scroll Reveals - Editorial Cards (.pc)
       gsap.utils.toArray('.pc').forEach((card: any) => {
         const visual = card.querySelector('.pc-visual');
-        const info = card.querySelector('.pc-info');
-
         // Reveal on scroll
         gsap.fromTo(card, { opacity: 0, y: 60 }, {
           opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
@@ -283,7 +389,7 @@ export default function HomePage() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [portfolioProjects]);
 
   return (
     <>
@@ -337,10 +443,13 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
-      <div className="impact-item rv"><span className="impact-num counter" data-t="10" data-s="+">10+</span><div className="impact-label">Years of Experience</div><div className="impact-sub">Delivering results since 2018</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".1s" }}><span className="impact-num counter" data-t="200" data-s="+">200+</span><div className="impact-label">Clients Served</div><div className="impact-sub">Across 8+ industries globally</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".2s" }}><span className="impact-num counter" data-t="50" data-s="+">50+</span><div className="impact-label">Projects Delivered</div><div className="impact-sub">On time, on budget, on point</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".3s" }}><span className="impact-num counter" data-t="8" data-s="+">8+</span><div className="impact-label">Industries Covered</div><div className="impact-sub">Focused expertise across growth sectors</div></div>
+      {impactStats.map((item, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={item.label}>
+          <span className="impact-num counter" data-p={item.prefix || ''} data-t={item.target} data-s={item.suffix || ''}>{item.value}</span>
+          <div className="impact-label">{item.label}</div>
+          <div className="impact-sub">{item.sub}</div>
+        </div>
+      ))}
     </div>
   </div>
 </section>
@@ -364,389 +473,44 @@ export default function HomePage() {
 
 
      <div className="filter-menu">
-            <button className="filter-btn active" data-filter="all">All</button>
-            <button className="filter-btn" data-filter="Branding">Branding</button>
-            <button className="filter-btn" data-filter="Events">Events</button>
-            <button className="filter-btn" data-filter="Illustration">Illustration</button>
-            <button className="filter-btn" data-filter="Interiors">Interiors</button>
-            <button className="filter-btn" data-filter="Packaging">Packaging</button>
-            <button className="filter-btn" data-filter="Print">Print</button>
-            <button className="filter-btn" data-filter="Publication">Publication</button>
-            <button className="filter-btn" data-filter="Websites">Websites</button>
-        </div>
+      {portfolioCategories.map(category => (
+        <button key={category} className={`filter-btn ${category === 'all' ? 'active' : ''}`} data-filter={category}>
+          {category === 'all' ? 'All' : category}
+        </button>
+      ))}
+    </div>
 
     {/* Project Grid */}
     <div className="project-grid" id="projectGrid">
-      {/* Project 1 - Branding */}
-      {/* <a href="/project/branding" className="project-card" data-category="Branding">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Branding</span>
-                <h3 className="overlay-title">Zenith Realty Rebrand</h3>
+      {portfolioProjects.map(project => (
+        <a href={`/project/${project.id}`} className="project-card" data-category={project.category} key={project.id}>
+          <div className="card-visual">
+            <div className="card-image-wrapper">
+              {project.image ? (
+                <img src={project.image} alt={project.imageAlt || project.title} loading="lazy" />
+              ) : (
+                <div className="card-placeholder" style={{ background: project.placeholderGradient }}>
+                  <span className="placeholder-icon">{project.icon || '✨'}</span>
+                </div>
+              )}
+              <div className="card-overlay">
+                <div className="overlay-content">
+                  <span className="overlay-category">{project.category}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="card-info">
-          <div className="card-category">
-            <i className="fa-solid fa-palette"></i>
-            <span>Branding</span>
-          </div>
-          <h3 className="card-title">Zenith Realty Rebrand</h3>
-          <div className="card-tags">
-            <span className="tag">Brand Identity</span>
-            <span className="tag">Visual Design</span>
-            <span className="tag">Guidelines</span>
-          </div>
-        </div>
-      </a> */}
-
-
-<a href="/project/branding" className="project-card" data-category="Branding">
-  <div className="card-visual">
-    <div className="card-image-wrapper">
-      <img src="/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png" alt="Zenith Realty" loading="lazy" />
-      <div className="card-overlay">
-        <div className="overlay-content">
-          <span className="overlay-category">Branding</span>
-          {/* <h3 className="overlay-title">Zenith Realty Rebrand</h3> */}
-        </div>
-      </div>
-    </div>
-  </div>
-  <div className="card-info">
-    <h3 className="card-title">Zenith Realty Rebrand</h3>
-    
-    <div className="meta-container">
-      <div className="card-tags">
-        <span className="tag">Brand Identity</span>
-        <span className="tag">Visual Design</span>
-        <span className="tag">Guidelines</span>
-      </div>
-      
-      <div className="show-project-view">Show Project</div>
-    </div>
-  </div>
-</a>
-
-
-      {/* Project 2 - Web Design */}
-      <a href="/project/websites" className="project-card" data-category="Websites">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png" alt="HealthCore Platform" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Websites</span>
-                {/* <h3 className="overlay-title">HealthCore Platform</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <div className="card-info">
-          <h3 className="card-title">Healthcare Platform</h3>
-          <div className="meta-container">
-          <div className="card-tags">
-             <span className="tag">Healthcare</span>
-            <span className="tag">SaaS</span>
-            <span className="tag">Dashboard</span>
-          </div>
-
-          <div className="show-project-view">Show Project</div>
-          {/* <div className="card-category">
-            <i className="fa-solid fa-laptop-code"></i>
-            <span>Websites</span>
-          </div>
-          <h3 className="card-title">HealthCore Platform</h3>
-          <div className="card-tags">
-            <span className="tag">Healthcare</span>
-            <span className="tag">SaaS</span>
-            <span className="tag">Dashboard</span>
-          </div> */}
-          </div>
-        </div>
-      </a>
-
-      {/* Project 3 - UI/UX */}
-      <a href="/project/events" className="project-card" data-category="Events">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png" alt="LuxeStore Commerce" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Events</span>
-                {/* <h3 className="overlay-title">LuxeStore Commerce</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">LuxeStore Commerce</h3>
-
-          <div className="meta-container">
-            <div className="card-tags">     
-            <span className="tag">E-Commerce</span>
-            <span className="tag">UX Research</span>
-            <span className="tag">Design System</span>
-          </div>
-          <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 4 - Mobile Apps */}
-      <a href="/project/nova" className="project-card" data-category="Publication">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))" }}>
-              <span className="placeholder-icon">📱</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Mobile Apps</span>
-                {/* <h3 className="overlay-title">FitTrack Pro</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-        
-          <h3 className="card-title">FitTrack Pro</h3>
+          <div className="card-info">
+            <h3 className="card-title">{project.title}</h3>
             <div className="meta-container">
-          <div className="card-tags">
-            <span className="tag">iOS</span>
-            <span className="tag">Android</span>
-            <span className="tag">Health</span>
-          </div>
-           <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 5 - Development */}
-      <a href="/project/mfg" className="project-card" data-category="Publication">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))" }}>
-              <span className="placeholder-icon">🏭</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Development</span>
-                {/* <h3 className="overlay-title">IndustrIQ IoT</h3> */}
+              <div className="card-tags">
+                {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
               </div>
+              <div className="show-project-view">Show Project</div>
             </div>
           </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">IndustrIQ IoT Dashboard</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">React</span>
-              <span className="tag">IoT</span>
-              <span className="tag">Real-time</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 6 - Branding */}
-      <a href="/project/nova" className="project-card" data-category="Branding">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.3), rgba(37,99,235,0.2))" }}>
-              <span className="placeholder-icon">🚀</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Branding</span>
-                {/* <h3 className="overlay-title">NovaBrand Launch</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">NovaBrand Launch Campaign</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Identity</span>
-              <span className="tag">Strategy</span>
-              <span className="tag">Launch</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 7 - Web Design */}
-      <a href="/project/seo" className="project-card" data-category="Websites">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png" alt="OrganicBoost" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Web Design</span>
-                {/* <h3 className="overlay-title">OrganicBoost SEO</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">OrganicBoost SEO Campaign</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">SEO</span>
-              <span className="tag">Marketing</span>
-              <span className="tag">Growth</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 8 - UI/UX */}
-      <a href="/project/social" className="project-card" data-category="Interiors">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))" }}>
-              <span className="placeholder-icon">🎨</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">UI/UX</span>
-                {/* <h3 className="overlay-title">ArtFlow Creative</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">ArtFlow Creative Platform</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Creative</span>
-              <span className="tag">Collaboration</span>
-              <span className="tag">SaaS</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 9 - Mobile Apps */}
-      <a href="/project/fintech" className="project-card" data-category="Packaging">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))" }}>
-              <span className="placeholder-icon">💰</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Mobile Apps</span>
-                {/* <h3 className="overlay-title">PayWise Finance</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">PayWise Finance App</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Fintech</span>
-              <span className="tag">Payments</span>
-              <span className="tag">Security</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 10 - Development */}
-      <a href="/project/fintech" className="project-card" data-category="Packaging">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <img src="/Images/Gemini_Generated_Image_ctaev4ctaev4ctae.png" alt="FinEdge" loading="lazy" />
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Development</span>
-                {/* <h3 className="overlay-title">FinEdge Platform</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">FinEdge Growth Platform</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Python</span>
-              <span className="tag">AWS</span>
-              <span className="tag">ML</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 11 - Web Design */}
-      <a href="/project/ecommerce" className="project-card" data-category="Events">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))" }}>
-              <span className="placeholder-icon">🍔</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">Web Design</span>
-                {/* <h3 className="overlay-title">FoodieHub Delivery</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">FoodieHub Delivery Platform</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Food Tech</span>
-              <span className="tag">Marketplace</span>
-              <span className="tag">UX</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
-
-      {/* Project 12 - UI/UX */}
-      <a href="/project/mfg" className="project-card" data-category="Websites">
-        <div className="card-visual">
-          <div className="card-image-wrapper">
-            <div className="card-placeholder" style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.3), rgba(236,72,153,0.2))" }}>
-              <span className="placeholder-icon">📊</span>
-            </div>
-            <div className="card-overlay">
-              <div className="overlay-content">
-                <span className="overlay-category">UI/UX</span>
-                {/* <h3 className="overlay-title">DataViz Analytics</h3> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card-info">
-          <h3 className="card-title">DataViz Analytics Dashboard</h3>
-          <div className="meta-container">
-            <div className="card-tags">
-              <span className="tag">Analytics</span>
-              <span className="tag">Data Viz</span>
-              <span className="tag">Enterprise</span>
-            </div>
-            <div className="show-project-view">Show Project</div>
-          </div>
-        </div>
-      </a>
+        </a>
+      ))}
     </div>
   </div>
 </section>
@@ -759,32 +523,14 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-a-${brand}`} aria-label={brand}>
-          <span>{brand}</span>
+      {logos.map((brand) => (
+        <div className="client-logo-card" key={`logo-a-${brand.name}`} aria-label={brand.name}>
+          <span>{brand.name}</span>
         </div>
       ))}
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-b-${brand}`} aria-hidden="true">
-          <span>{brand}</span>
+      {logos.map((brand) => (
+        <div className="client-logo-card" key={`logo-b-${brand.name}`} aria-hidden="true">
+          <span>{brand.name}</span>
         </div>
       ))}
     </div>
