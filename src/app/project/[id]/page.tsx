@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
 import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
+import { supabase } from '@/lib/supabase';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -38,8 +39,25 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     loadPortfolioProjects();
 
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(loadPortfolioProjects, 250);
+    };
+
+    const realtimeChannel = supabase
+      .channel(`project-live-content-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_categories' }, scheduleRefresh)
+      .subscribe();
+
+    const pollingFallback = window.setInterval(loadPortfolioProjects, 15000);
+
     return () => {
       active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.clearInterval(pollingFallback);
+      supabase.removeChannel(realtimeChannel);
     };
   }, [id]);
 
