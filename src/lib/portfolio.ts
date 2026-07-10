@@ -165,16 +165,21 @@ const getStringValue = (source: any, keys: string[]): string => {
 
 const resolveAssetUrl = (value: string): string => {
   if (!value) return '';
-  if (/^(https?:|data:|blob:|\/)/.test(value)) {
-    if (value.startsWith('/uploads') || value.startsWith('/media') || value.startsWith('/storage')) {
+  const trimmed = value.trim();
+  // Already absolute URL (Supabase storage, CDN, external) — return as-is
+  if (/^https?:\/\//.test(trimmed)) return trimmed;
+  // Data/blob URIs
+  if (/^(data:|blob:)/.test(trimmed)) return trimmed;
+  // Root-relative: only prepend backend if it looks like a server upload path
+  if (trimmed.startsWith('/')) {
+    if (/^\/(uploads|media|storage|files|assets)/.test(trimmed)) {
       const apiBaseUrl = getBackendBaseUrl();
-      return apiBaseUrl ? `${apiBaseUrl}${value}` : value;
+      return apiBaseUrl ? `${apiBaseUrl}${trimmed}` : trimmed;
     }
-    return value;
+    return trimmed; // local public path — keep as-is
   }
-
-  const apiBaseUrl = getBackendBaseUrl();
-  return apiBaseUrl ? `${apiBaseUrl}/${value.replace(/^\/+/, '')}` : value;
+  // Relative path — assume it's a public asset
+  return `/${trimmed.replace(/^\/+/, '')}`;
 };
 
 const splitMetricDisplayValue = (displayValue: string) => {

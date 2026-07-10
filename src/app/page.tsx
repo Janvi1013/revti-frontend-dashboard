@@ -81,10 +81,13 @@ export default function HomePage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_categories' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_numbers' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'homepage_stats' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_metrics' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_logos' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, scheduleRefresh)
       .subscribe();
+
 
     const pollingFallback = window.setInterval(loadHomeContent, 15000);
 

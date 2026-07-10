@@ -546,29 +546,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   <div className="wrap">
     <div className="overview-grid">
       <div>
-        {/* <div className="sec-label rv"><span className="dot"></span> Overview</div> */}
-          <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">Overview</span></h2>
+        <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">Overview</span></h2>
         <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>{project.overviewTitle || project.headline || project.title}</h2>
-        <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{project.description || project.shortDescription || project.tagline}</p>
-        <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{project.compliance || project.impact || ''}</p>
-
+        {(project.description || project.shortDescription || project.tagline) && (
+          <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{project.description || project.shortDescription || project.tagline}</p>
+        )}
+        {project.compliance && (
+          <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{project.compliance}</p>
+        )}
       </div>
-      <div className="ov-cards">
-        {overviewCards.map((card, index) => (
-          <div className="ov-card rv" style={{ transitionDelay: `${0.1 + index * 0.05}s` }} key={card.title}>
-            <div className="ov-icon" style={{ background: "rgba(124,58,237,.15)", border: "1px solid rgba(124,58,237,.25)" }}>{card.icon}</div>
-            <div className="ov-text"><h4>{card.title}</h4><p>{card.text}</p></div>
-          </div>
-        ))}
-      </div>
+      {overviewCards.length > 0 && (
+        <div className="ov-cards">
+          {overviewCards.map((card, index) => (
+            <div className="ov-card rv" style={{ transitionDelay: `${0.1 + index * 0.05}s` }} key={card.title}>
+              <div className="ov-icon" style={{ background: "rgba(124,58,237,.15)", border: "1px solid rgba(124,58,237,.25)" }}>{card.icon}</div>
+              <div className="ov-text"><h4>{card.title}</h4><p>{card.text}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   </div>
 </section>
 
 {/* ══ PROCESS ══ */}
+{processSteps.length > 0 && (
 <section className="proj-process" id="process">
   <div className="wrap">
-    {/* <div className="sec-label rv"><span className="dot"></span> Our Process</div> */}
     <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
     <div className="timeline">
       {processSteps.map((step, index) => (
@@ -580,6 +584,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     </div>
   </div>
 </section>
+)}
 
 {/* 06. SCROLL REVEAL GALLERY (BRILIO STYLE) */}
 <section id="project-gallery" className="sticky-section-gallery">
@@ -608,6 +613,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 </section>
 
 {/* ══ RESULTS — IMPACT ══ */}
+{project.stats.length > 0 && (
 <section className="proj-results" id="results">
   <div className="wrap impact-showcase">
     <h2 className="impact-title rv">Impact <span className="muted">Results</span></h2>
@@ -618,14 +624,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <div className="impact-metric-row">
             {stat.before && <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">{stat.before}</span></span>}
             {stat.before && <span className="impact-arrow" aria-hidden="true">→</span>}
-            <span className="impact-value-group"><span className="impact-after-label">After</span><span className="impact-after">{stat.after || stat.num}</span></span>
+            <span className="impact-value-group">
+              <span className="impact-after-label">{stat.before ? 'After' : 'Result'}</span>
+              <span className="impact-after">{stat.after ?? stat.num ?? '—'}</span>
+            </span>
           </div>
         </div>
       ))}
     </div>
-    {/* <p className="impact-copy rv" style={{ transitionDelay: ".18s" }}>Fewer diagnostic errors after launching the AI-assisted healthcare platform.</p> */}
   </div>
 </section>
+)}
 
 {/* Project Previous / Next */}
 <div className="project-switcher" aria-label="Project navigation">
