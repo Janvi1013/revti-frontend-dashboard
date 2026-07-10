@@ -232,36 +232,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     };
     mobLinks.forEach(a => a.addEventListener('click', handleMobLinkClick));
 
-    // 6. Reveal Observer
-    const ro = new IntersectionObserver(e => e.forEach(en => {
-      if (en.isIntersecting) {
-        en.target.classList.add('vis');
-        ro.unobserve(en.target);
-      }
-    }), { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.rv').forEach(el => ro.observe(el));
 
-    // 7. Counters
-    function runCounter(el: any) {
-      const tgt = parseFloat(el.dataset.t);
-      const suf = el.dataset.s || '';
-      const pre = el.dataset.p || '';
-      const dur = 2000;
-      const s = performance.now();
-      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
-      (function tick(now) {
-        const t = Math.min((now - s) / dur, 1);
-        el.textContent = pre + Math.round(ease(t) * tgt) + suf;
-        if (t < 1) requestAnimationFrame(tick);
-      })(s);
-    }
-    const co = new IntersectionObserver(e => e.forEach(en => {
-      if (en.isIntersecting) {
-        runCounter(en.target);
-        co.unobserve(en.target);
-      }
-    }), { threshold: 0.5 });
-    document.querySelectorAll('.counter').forEach(el => co.observe(el));
 
     // 8. Lightbox Setup
     const galMeta = (project.gallery.length ? project.gallery : [project.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
@@ -446,6 +417,44 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [id, router, projects, project.gallery, project.image, project.title]);
+
+  useEffect(() => {
+    // 1. Reveal Observer
+    const ro = new IntersectionObserver(e => e.forEach(en => {
+      if (en.isIntersecting) {
+        en.target.classList.add('vis');
+        ro.unobserve(en.target);
+      }
+    }), { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.rv').forEach(el => ro.observe(el));
+
+    // 2. Counters
+    function runCounter(el: any) {
+      const tgt = parseFloat(el.dataset.t);
+      const suf = el.dataset.s || '';
+      const pre = el.dataset.p || '';
+      const dur = 2000;
+      const s = performance.now();
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+      (function tick(now) {
+        const t = Math.min((now - s) / dur, 1);
+        el.textContent = pre + Math.round(ease(t) * tgt) + suf;
+        if (t < 1) requestAnimationFrame(tick);
+      })(s);
+    }
+    const co = new IntersectionObserver(e => e.forEach(en => {
+      if (en.isIntersecting) {
+        runCounter(en.target);
+        co.unobserve(en.target);
+      }
+    }), { threshold: 0.5 });
+    document.querySelectorAll('.counter').forEach(el => co.observe(el));
+
+    return () => {
+      ro.disconnect();
+      co.disconnect();
+    };
+  }, [project, projects]);
 
   const galleryImages = project.gallery.length ? project.gallery : [project.image].filter((image): image is string => Boolean(image));
   const overviewCards = [

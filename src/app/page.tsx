@@ -177,37 +177,7 @@ export default function HomePage() {
     };
     mobLinks.forEach(a => a.addEventListener('click', handleMobLinkClick));
 
-    // 4. Reveal (standard IntersectionObserver fallback if GSAP not trigger)
-    const ro = new IntersectionObserver(e => e.forEach(en => {
-      if (en.isIntersecting) {
-        en.target.classList.add('vis');
-        (ro as any).unobserve(en.target);
-      }
-    }), { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.rv').forEach(el => ro.observe(el));
-
-    // 5. Counters
-    function runCounter(el: any) {
-      const tgt = parseFloat(el.dataset.t);
-      const suf = el.dataset.s || '';
-      const dur = 2000;
-      const s = performance.now();
-      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
-      (function tick(now) {
-        const t = Math.min((now - s) / dur, 1);
-        el.textContent = Math.round(ease(t) * tgt) + suf;
-        if (t < 1) requestAnimationFrame(tick);
-      })(s);
-    }
-    const co = new IntersectionObserver(e => e.forEach(en => {
-      if (en.isIntersecting) {
-        runCounter(en.target);
-        (co as any).unobserve(en.target);
-      }
-    }), { threshold: 0.5 });
-    document.querySelectorAll('.counter').forEach(el => co.observe(el));
-
-    // 6. Smooth hash links
+    // 4. Smooth hash links
     const handleHashLinkClick = (e: Event) => {
       const targetId = (e.currentTarget as HTMLElement).getAttribute('href');
       if (targetId && targetId.startsWith('#')) {
@@ -377,6 +347,44 @@ export default function HomePage() {
     };
   }, [portfolioProjects]);
 
+  useEffect(() => {
+    // 1. Reveal (standard IntersectionObserver fallback if GSAP not trigger)
+    const ro = new IntersectionObserver(e => e.forEach(en => {
+      if (en.isIntersecting) {
+        en.target.classList.add('vis');
+        ro.unobserve(en.target);
+      }
+    }), { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.rv').forEach(el => ro.observe(el));
+
+    // 2. Counters
+    function runCounter(el: any) {
+      const tgt = parseFloat(el.dataset.t);
+      const suf = el.dataset.s || '';
+      const dur = 2000;
+      const s = performance.now();
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+      (function tick(now) {
+        const t = Math.min((now - s) / dur, 1);
+        el.textContent = Math.round(ease(t) * tgt) + suf;
+        if (t < 1) requestAnimationFrame(tick);
+      })(s);
+    }
+    const co = new IntersectionObserver(e => e.forEach(en => {
+      if (en.isIntersecting) {
+        runCounter(en.target);
+        co.unobserve(en.target);
+      }
+    }), { threshold: 0.5 });
+    document.querySelectorAll('.counter').forEach(el => co.observe(el));
+
+    return () => {
+      ro.disconnect();
+      co.disconnect();
+    };
+  }, [impactMetrics, portfolioProjects]);
+
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: indexCustomCss }} />
@@ -447,12 +455,12 @@ export default function HomePage() {
 <section className="portfolio-section" id="portfolio">
   <div className="portfolio-container">
     {/* Section Header */}
-    <div className="portfolio-header">
-      {/* <span className="portfolio-eyebrow">
-       
-      </span> */}
-      <h2 className="portfolio-title">Creative Projects</h2>
-      <p className="portfolio-subtitle">Crafting digital experiences that drive measurable results across branding, design, and development.</p>
+    <div className="gallery-sec-hdr">
+      <div>
+        <span className="eyebrow">Portfolio</span>
+        <h2>Creative Projects</h2>
+      </div>
+      <p>Crafting digital experiences that drive measurable results across branding, design, and development.</p>
     </div>
 
 
