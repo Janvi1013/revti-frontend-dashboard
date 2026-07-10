@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
+<<<<<<< HEAD
 import { 
   fetchPortfolioProjects, 
   fallbackPortfolioProjects, 
@@ -35,6 +36,34 @@ export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
   const [impactNumbers, setImpactNumbers] = useState<ImpactNumber[]>(fallbackImpactNumbers);
+=======
+import { fetchClientLogos, fetchContactSectionContent, fetchHomeHeroContent, fetchImpactMetrics, fetchPortfolioProjects, fetchSocialLinks, fallbackClientLogos, fallbackContactSectionContent, fallbackHomeHeroContent, fallbackImpactMetrics, fallbackPortfolioProjects, fallbackSocialLinks, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
+import { supabase } from '@/lib/supabase';
+
+
+const renderHighlightedText = (title: string, highlight: string) => {
+  if (!highlight) return title;
+  const start = title.toLowerCase().indexOf(highlight.toLowerCase());
+  if (start === -1) return title;
+  const end = start + highlight.length;
+
+  return (
+    <>
+      {title.slice(0, start)}
+      <span className="grad">{title.slice(start, end)}</span>
+      {title.slice(end)}
+    </>
+  );
+};
+
+export default function HomePage() {
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>(fallbackImpactMetrics);
+  const [heroContent, setHeroContent] = useState<HomeHeroContent>(fallbackHomeHeroContent);
+  const [contactContent, setContactContent] = useState<ContactSectionContent>(fallbackContactSectionContent);
+  const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks);
+>>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
 
   const portfolioCategories = useMemo(() => {
     const categories = portfolioProjects.map(project => project.category).filter(Boolean);
@@ -44,6 +73,7 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
+<<<<<<< HEAD
     async function loadAllData() {
       try {
         const [nextProjects, nextLogos, nextImpacts] = await Promise.all([
@@ -56,16 +86,67 @@ export default function HomePage() {
           if (nextProjects.length) setPortfolioProjects(nextProjects);
           if (nextLogos.length) setClientLogos(nextLogos);
           if (nextImpacts.length) setImpactNumbers(nextImpacts);
+=======
+    async function loadHomeContent() {
+      try {
+        const [nextProjects, nextHeroContent, nextContactContent, nextClientLogos, nextSocialLinks] = await Promise.all([
+          fetchPortfolioProjects(),
+          fetchHomeHeroContent(),
+          fetchContactSectionContent(),
+          fetchClientLogos(),
+          fetchSocialLinks(),
+        ]);
+        const projectsForMetrics = nextProjects.length ? nextProjects : fallbackPortfolioProjects;
+        if (active && nextProjects.length) {
+          setPortfolioProjects(nextProjects);
+>>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
+        }
+
+        if (active) {
+          setHeroContent(nextHeroContent);
+          setContactContent(nextContactContent);
+          setClientLogos(nextClientLogos);
+          setSocialLinks(nextSocialLinks);
+        }
+
+        const nextImpactMetrics = await fetchImpactMetrics(projectsForMetrics);
+        if (active && nextImpactMetrics.length) {
+          setImpactMetrics(nextImpactMetrics);
         }
       } catch (error) {
         console.error('Unable to load data from Supabase.', error);
       }
     }
 
+<<<<<<< HEAD
     loadAllData();
+=======
+    loadHomeContent();
+
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(loadHomeContent, 250);
+    };
+
+    const realtimeChannel = supabase
+      .channel('homepage-live-content')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_categories' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_numbers' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_logos' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, scheduleRefresh)
+      .subscribe();
+
+    const pollingFallback = window.setInterval(loadHomeContent, 15000);
+>>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
 
     return () => {
       active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.clearInterval(pollingFallback);
+      supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -383,12 +464,12 @@ export default function HomePage() {
   <div className="orb" style={{ width: "280px", height: "280px", bottom: "-50px", left: "40%", background: "rgba(6,182,212,.06)", animationDelay: "-8s" }}></div>
   <div className="wrap" style={{ width: "100%" }}>
     <div className="hero-content">
-      <div className="hero-ey"><span className="ey-dot"></span> Digital Agency · Est. 2018</div>
-      <h1 className="hero-h1">We Make<span className="grad"> Digital </span>Matter.</h1>
-      <p className="hero-sub">From SEO-driven growth strategies to full-scale enterprise software — Revti Digital builds things that perform.</p>
+      <div className="hero-ey"><span className="ey-dot"></span> {heroContent.eyebrow}</div>
+      <h1 className="hero-h1">{renderHighlightedText(heroContent.title, heroContent.highlight)}</h1>
+      <p className="hero-sub">{heroContent.subtitle}</p>
       <div className="hero-btns">
-        <a href="#portfolio" className="btn-primary"><i className="fa-solid fa-arrow-down"></i> View Our Work</a>
-        <a href="#contact" className="btn-ghost"><i className="fa-solid fa-paper-plane"></i> Start a Project</a>
+        <a href={heroContent.primaryHref} className="btn-primary"><i className={`fa-solid ${heroContent.primaryIcon}`}></i> {heroContent.primaryLabel}</a>
+        <a href={heroContent.secondaryHref} className="btn-ghost"><i className={`fa-solid ${heroContent.secondaryIcon}`}></i> {heroContent.secondaryLabel}</a>
       </div>
     </div>
   </div>
@@ -399,6 +480,7 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
+<<<<<<< HEAD
       {impactNumbers.map((item, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={item.id}>
           <span className="impact-num counter" data-t={item.number} data-s={item.suffix}>
@@ -406,6 +488,13 @@ export default function HomePage() {
           </span>
           <div className="impact-label">{item.title}</div>
           <div className="impact-sub">{item.shortDesc}</div>
+=======
+      {impactMetrics.map((metric, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={`${metric.label}-${index}`}>
+          <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
+          <div className="impact-label">{metric.label}</div>
+          {metric.sub && <div className="impact-sub">{metric.sub}</div>}
+>>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
         </div>
       ))}
     </div>
@@ -481,6 +570,7 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
+<<<<<<< HEAD
       {clientLogos.map((logo, index) => {
         const hasImage = logo.logoImage && (logo.logoImage.startsWith('http') || logo.logoImage.startsWith('/'));
         return (
@@ -523,6 +613,18 @@ export default function HomePage() {
           </div>
         );
       })}
+=======
+      {clientLogos.map((logo) => (
+        <div className="client-logo-card" key={`logo-a-${logo.id}`} aria-label={logo.name}>
+          {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
+        </div>
+      ))}
+      {clientLogos.map((logo) => (
+        <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
+          {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
+        </div>
+      ))}
+>>>>>>> bf3c16778c2ea25de08abe8377ceecfb98074abb
     </div>
   </div>
 </section>
@@ -531,15 +633,15 @@ export default function HomePage() {
 <section className="contact-cta" id="contact" aria-labelledby="contact-cta-title">
   <div className="wrap">
     <div className="contact-cta-box rv">
-      <h2 className="cta-title" id="contact-cta-title">Let&apos;s Create Something <span className="muted">Together</span></h2>
+      <h2 className="cta-title" id="contact-cta-title">{renderHighlightedText(contactContent.heading, contactContent.highlight)}</h2>
       <div className="cta-row">
         <span className="cta-line" aria-hidden="true"></span>
-        <a href="mailto:hello@revtidigital.com" className="btn-primary">Get In Touch! <i className="fa-solid fa-arrow-right"></i></a>
+        <a href={contactContent.buttonHref} className="btn-primary">{contactContent.buttonLabel} <i className="fa-solid fa-arrow-right"></i></a>
       </div>
       <div className="cta-socials" aria-label="Social links">
-        <a href="#">Instagram <i className="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="#">Twitter <i className="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <a href="#">Linkedin <i className="fa-solid fa-arrow-up-right-from-square"></i></a>
+        {socialLinks.map((social) => (
+          <a href={social.href} key={social.id}>{social.platform} <i className="fa-solid fa-arrow-up-right-from-square"></i></a>
+        ))}
       </div>
     </div>
   </div>

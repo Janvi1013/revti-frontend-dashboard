@@ -2052,6 +2052,23 @@ export const indexCustomCss = `
     box-shadow: 0 6px 20px rgba(255,255,255,0.18);
   }
 
+
+  .client-logo-card img {
+    max-width: 150px;
+    max-height: 54px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: grayscale(1) brightness(1.25);
+    opacity: 0.82;
+    transition: filter .3s ease, opacity .3s ease, transform .3s ease;
+  }
+  .client-logo-card:hover img {
+    filter: grayscale(0) brightness(1);
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+
   /* Success State */
   .form-success-container {
     text-align: center;
