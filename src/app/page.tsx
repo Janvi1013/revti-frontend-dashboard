@@ -3,58 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-
-type PortfolioProject = {
-  id: string;
-  title: string;
-  category: string;
-  tags: string[];
-  image?: string;
-  imageAlt?: string;
-  icon?: string;
-  placeholderGradient?: string;
-};
-
-const fallbackPortfolioProjects: PortfolioProject[] = [
-  { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty' },
-  { id: 'websites', title: 'Healthcare Platform', category: 'Websites', tags: ['Healthcare', 'SaaS', 'Dashboard'], image: '/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png', imageAlt: 'HealthCore Platform' },
-  { id: 'events', title: 'LuxeStore Commerce', category: 'Events', tags: ['E-Commerce', 'UX Research', 'Design System'], image: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', imageAlt: 'LuxeStore Commerce' },
-  { id: 'nova', title: 'FitTrack Pro', category: 'Publication', tags: ['iOS', 'Android', 'Health'], icon: '📱', placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' },
-  { id: 'mfg', title: 'IndustrIQ IoT Dashboard', category: 'Publication', tags: ['React', 'IoT', 'Real-time'], icon: '🏭', placeholderGradient: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))' },
-  { id: 'seo', title: 'OrganicBoost SEO Campaign', category: 'Websites', tags: ['SEO', 'Marketing', 'Growth'], image: '/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png', imageAlt: 'OrganicBoost' },
-  { id: 'social', title: 'ArtFlow Creative Platform', category: 'Interiors', tags: ['Creative', 'Collaboration', 'SaaS'], icon: '🎨', placeholderGradient: 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))' },
-  { id: 'fintech', title: 'PayWise Finance App', category: 'Packaging', tags: ['Fintech', 'Payments', 'Security'], icon: '💰', placeholderGradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))' },
-  { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))' },
-];
-
-const getStringValue = (source: any, keys: string[]) => {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  return '';
-};
-
-const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
-  const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
-  if (!title) return null;
-
-  const rawTags = item?.tags || item?.technologies || item?.services || item?.skills || [];
-  const tags = Array.isArray(rawTags)
-    ? rawTags.map(tag => typeof tag === 'string' ? tag : getStringValue(tag, ['name', 'title'])).filter(Boolean).slice(0, 3)
-    : String(rawTags).split(',').map(tag => tag.trim()).filter(Boolean).slice(0, 3);
-
-  return {
-    id: getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`,
-    title,
-    category: getStringValue(item, ['category', 'type', 'portfolioCategory']) || 'Branding',
-    tags: tags.length ? tags : ['Case Study'],
-    image: getStringValue(item, ['image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']),
-    imageAlt: getStringValue(item, ['imageAlt', 'alt']) || title,
-    icon: '✨',
-    placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
-  };
-};
+import { extractPortfolioProjects, fallbackPortfolioProjects, getPortfolioApiUrl, type PortfolioProject } from '@/lib/portfolio';
 
 export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
@@ -65,20 +14,17 @@ export default function HomePage() {
   }, [portfolioProjects]);
 
   useEffect(() => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
-    if (!apiBaseUrl) return;
+    const portfolioApiUrl = getPortfolioApiUrl();
+    if (!portfolioApiUrl) return;
 
     const controller = new AbortController();
 
     async function loadPortfolioProjects() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/portfolio`, { signal: controller.signal });
+        const response = await fetch(portfolioApiUrl, { signal: controller.signal });
         if (!response.ok) throw new Error(`Portfolio request failed with ${response.status}`);
         const payload = await response.json();
-        const rawProjects = Array.isArray(payload) ? payload : payload?.data || payload?.portfolio || payload?.projects || [];
-        const nextProjects = Array.isArray(rawProjects)
-          ? rawProjects.map(normalizePortfolioProject).filter((project): project is PortfolioProject => Boolean(project))
-          : [];
+        const nextProjects = extractPortfolioProjects(payload);
 
         if (nextProjects.length) {
           setPortfolioProjects(nextProjects);

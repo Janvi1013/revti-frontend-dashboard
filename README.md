@@ -37,10 +37,10 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Backend portfolio connection
 
-Only the portfolio gallery on the home page reads from the backend. Set the backend base URL before starting the frontend:
+Only the portfolio sections read from the backend: the home-page gallery, portfolio filters, project detail pages, previous/next navigation, galleries, stats, process steps, and related work. Set the backend base URL before starting the frontend:
 
 ```bash
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 npm run dev
 ```
 
-The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts either an array response or an object containing `data`, `portfolio`, or `projects`. Supported project fields include `title`/`name`, `slug`/`id`, `category`, `tags`/`technologies`/`services`, and `image`/`imageUrl`/`thumbnail`/`coverImage`.
+The frontend requests `GET <NEXT_PUBLIC_BACKEND_URL>/api/portfolio` and accepts either an array response or an object containing `data`, `portfolio`, or `projects`. It maps the backend portfolio/project fields including `id`, `cat`, `year`, `title`, `client`, `tagline`, `headline`, `desc`, `shortDesc`, `tags`, `thumb`, `gallery`, `stats`, `industry`, `sprint`, `overview_title`, `challenge`, `approach`, `impact`, `compliance`, and `process`, while keeping fallback content if the backend is unavailable.
