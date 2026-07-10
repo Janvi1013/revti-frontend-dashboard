@@ -2072,6 +2072,201 @@ export const indexCustomCss = `
   .form-success-container p {
     color: var(--text-secondary);
     font-size: 15px;
+  }
+  .modal-card {
+    background: rgba(13, 13, 26, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 48px;
+    max-width: 680px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(124,58,237,.2), 0 20px 50px rgba(0,0,0,0.5);
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-overlay.open .modal-card {
+    transform: scale(1) translateY(0);
+  }
+  .modal-close {
+    position: absolute;
+    top: 24px; right: 24px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 28px;
+    line-height: 1;
+
+    transition: color 0.2s;
+  }
+  .modal-close:hover {
+    color: var(--text-primary);
+  }
+  .modal-title {
+    font-family: var(--font-heading), var(--font-body), sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .modal-title .grad {
+    background: var(--grad-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .modal-card {
+      padding: 32px 24px;
+    }
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+  .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .form-label .required {
+    color: #ef4444;
+  }
+  .form-line-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 0;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: var(--font-body), sans-serif;
+    outline: none;
+  
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .form-line-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+  .form-line-input:focus {
+    border-color: #06b6d4;
+  }
+  
+  /* Checkboxes section */
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 20px;
+    margin-top: 8px;
+  }
+  @media (max-width: 500px) {
+    .checkbox-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+ 
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .check-item:hover {
+    color: var(--text-primary);
+  }
+  .check-item input[type="checkbox"] {
+    display: none;
+  }
+  .custom-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+  }
+  .check-item input[type="checkbox"]:checked + .custom-checkbox {
+    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.2);
+  }
+  .check-item input[type="checkbox"]:checked + .custom-checkbox::after {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 11px;
+    color: var(--text-primary);
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-submit-btn {
+    align-self: flex-start;
+    padding: 14px 32px;
+    border-radius: 99px;
+    background: var(--text-primary);
+    border: none;
+    color: #06060f !important;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+
+    box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .form-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255,255,255,0.18);
+  }
+
+  /* Success State */
+  .form-success-container {
+    text-align: center;
+    padding: 40px 0;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .success-icon {
+    font-size: 64px;
+    color: #10b981;
+    margin-bottom: 24px;
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+  .form-success-container h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+  }
+  .form-success-container p {
+    color: var(--text-secondary);
+    font-size: 15px;
     max-width: 400px;
     margin: 0 auto;
     line-height: 1.6;
@@ -2080,5 +2275,151 @@ export const indexCustomCss = `
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── HOME LOGO CAROUSEL ── */
+  .logo-carousel-section {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(72px, 8vw, 112px) 0;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(124,58,237,.16), transparent 30%),
+      radial-gradient(circle at 82% 70%, rgba(6,182,212,.10), transparent 32%),
+      var(--bg2);
+    border-top: 1px solid rgba(255,255,255,.08);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .logo-carousel-section::before,
+  .logo-carousel-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: min(18vw, 220px);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .logo-carousel-section::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--bg2), rgba(10,10,18,0));
+  }
+
+  .logo-carousel-section::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--bg2), rgba(10,10,18,0));
+  }
+
+  .logo-carousel-header {
+    max-width: 760px;
+    margin: 0 auto clamp(34px, 5vw, 56px);
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .logo-carousel-eyebrow {
+    display: inline-flex;
+    margin-bottom: 14px;
+    padding: 7px 16px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    color: var(--txt2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,.04);
+  }
+
+  .logo-carousel-title {
+    font-size: clamp(30px, 4vw, 56px);
+    line-height: 1.02;
+    font-weight: 900;
+    letter-spacing: -.03em;
+    color: var(--txt);
+  }
+
+  .logo-carousel {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .logo-carousel-track {
+    display: flex;
+    width: max-content;
+    gap: 18px;
+    padding: 6px 18px;
+    animation: logoMarquee 32s linear infinite;
+  }
+
+  .logo-carousel:hover .logo-carousel-track {
+    animation-play-state: paused;
+  }
+
+  .client-logo-card {
+    min-width: clamp(180px, 18vw, 260px);
+    height: 108px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 24px;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+    backdrop-filter: blur(16px);
+    color: rgba(255,255,255,.76);
+    transition: transform .3s ease, border-color .3s ease, color .3s ease, background .3s ease;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .client-logo-card span {
+    font-size: clamp(18px, 2vw, 25px);
+    font-weight: 800;
+    letter-spacing: -.03em;
+    white-space: nowrap;
+  }
+
+  .client-logo-card img {
+    max-width: 85%;
+    max-height: 75%;
+    object-fit: contain;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+
+  .client-logo-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(255,255,255,.22);
+    background: linear-gradient(135deg, rgba(124,58,237,.20), rgba(6,182,212,.12));
+    color: #fff;
+  }
+
+  .client-logo-card:hover img {
+    opacity: 1;
+  }
+
+  @keyframes logoMarquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - 9px)); }
+  }
+
+  @media (max-width: 640px) {
+    .logo-carousel-section {
+      padding: 58px 0;
+    }
+
+    .logo-carousel-track {
+      gap: 12px;
+      animation-duration: 24s;
+    }
+
+    .client-logo-card {
+      min-width: 170px;
+      height: 88px;
+      border-radius: 18px;
+    }
   }
 `;

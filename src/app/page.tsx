@@ -3,10 +3,38 @@
 import { useEffect, useMemo, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
+import { 
+  fetchPortfolioProjects, 
+  fallbackPortfolioProjects, 
+  fetchClientLogos, 
+  fetchImpactNumbers, 
+  type PortfolioProject, 
+  type ClientLogo, 
+  type ImpactNumber 
+} from '@/lib/portfolio';
+
+const fallbackImpactNumbers: ImpactNumber[] = [
+  { id: '1', number: 10, suffix: '+', title: 'Years of Experience', shortDesc: 'Delivering results since 2018', displayOrder: 1 },
+  { id: '2', number: 200, suffix: '+', title: 'Clients Served', shortDesc: 'Across 8+ industries globally', displayOrder: 2 },
+  { id: '3', number: 50, suffix: '+', title: 'Projects Delivered', shortDesc: 'On time, on budget, on point', displayOrder: 3 },
+  { id: '4', number: 8, suffix: '+', title: 'Industries Covered', shortDesc: 'Focused expertise across growth sectors', displayOrder: 4 },
+];
+
+const fallbackClientLogos: ClientLogo[] = [
+  { id: '1', clientName: 'Apollo Health', logoImage: '', displayOrder: 1 },
+  { id: '2', clientName: 'Zenith Realty', logoImage: '', displayOrder: 2 },
+  { id: '3', clientName: 'LuxeStore', logoImage: '', displayOrder: 3 },
+  { id: '4', clientName: 'OrganicBoost', logoImage: '', displayOrder: 4 },
+  { id: '5', clientName: 'FinEdge', logoImage: '', displayOrder: 5 },
+  { id: '6', clientName: 'IndustrIQ', logoImage: '', displayOrder: 6 },
+  { id: '7', clientName: 'NovaBrand', logoImage: '', displayOrder: 7 },
+  { id: '8', clientName: 'FoodieHub', logoImage: '', displayOrder: 8 },
+];
 
 export default function HomePage() {
   const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
+  const [impactNumbers, setImpactNumbers] = useState<ImpactNumber[]>(fallbackImpactNumbers);
 
   const portfolioCategories = useMemo(() => {
     const categories = portfolioProjects.map(project => project.category).filter(Boolean);
@@ -16,18 +44,25 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
-    async function loadPortfolioProjects() {
+    async function loadAllData() {
       try {
-        const nextProjects = await fetchPortfolioProjects();
-        if (active && nextProjects.length) {
-          setPortfolioProjects(nextProjects);
+        const [nextProjects, nextLogos, nextImpacts] = await Promise.all([
+          fetchPortfolioProjects(),
+          fetchClientLogos(),
+          fetchImpactNumbers()
+        ]);
+        
+        if (active) {
+          if (nextProjects.length) setPortfolioProjects(nextProjects);
+          if (nextLogos.length) setClientLogos(nextLogos);
+          if (nextImpacts.length) setImpactNumbers(nextImpacts);
         }
       } catch (error) {
-        console.error('Unable to load portfolio projects from Supabase.', error);
+        console.error('Unable to load data from Supabase.', error);
       }
     }
 
-    loadPortfolioProjects();
+    loadAllData();
 
     return () => {
       active = false;
@@ -60,10 +95,10 @@ export default function HomePage() {
         }
       });
 
-      // Gallery header reveal
-      gsap.fromTo('.gallery-sec-hdr', { opacity: 0, y: 40 }, {
+      // Portfolio header reveal
+      gsap.fromTo('.portfolio-header', { opacity: 0, y: 40 }, {
         opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.gallery-sec-hdr', start: 'top 80%', once: true }
+        scrollTrigger: { trigger: '.portfolio-header', start: 'top 80%', once: true }
       });
 
       // Entrance animation for project cards
@@ -364,10 +399,15 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
-      <div className="impact-item rv"><span className="impact-num counter" data-t="10" data-s="+">10+</span><div className="impact-label">Years of Experience</div><div className="impact-sub">Delivering results since 2018</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".1s" }}><span className="impact-num counter" data-t="200" data-s="+">200+</span><div className="impact-label">Clients Served</div><div className="impact-sub">Across 8+ industries globally</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".2s" }}><span className="impact-num counter" data-t="50" data-s="+">50+</span><div className="impact-label">Projects Delivered</div><div className="impact-sub">On time, on budget, on point</div></div>
-      <div className="impact-item rv" style={{ transitionDelay: ".3s" }}><span className="impact-num counter" data-t="8" data-s="+">8+</span><div className="impact-label">Industries Covered</div><div className="impact-sub">Focused expertise across growth sectors</div></div>
+      {impactNumbers.map((item, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={item.id}>
+          <span className="impact-num counter" data-t={item.number} data-s={item.suffix}>
+            {item.number}{item.suffix}
+          </span>
+          <div className="impact-label">{item.title}</div>
+          <div className="impact-sub">{item.shortDesc}</div>
+        </div>
+      ))}
     </div>
   </div>
 </section>
@@ -441,34 +481,48 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-a-${brand}`} aria-label={brand}>
-          <span>{brand}</span>
-        </div>
-      ))}
-      {[
-        'Apollo Health',
-        'Zenith Realty',
-        'LuxeStore',
-        'OrganicBoost',
-        'FinEdge',
-        'IndustrIQ',
-        'NovaBrand',
-        'FoodieHub',
-      ].map((brand) => (
-        <div className="client-logo-card" key={`logo-b-${brand}`} aria-hidden="true">
-          <span>{brand}</span>
-        </div>
-      ))}
+      {clientLogos.map((logo, index) => {
+        const hasImage = logo.logoImage && (logo.logoImage.startsWith('http') || logo.logoImage.startsWith('/'));
+        return (
+          <div className="client-logo-card" key={`logo-a-${logo.id}-${index}`} aria-label={logo.clientName}>
+            {hasImage ? (
+              <img 
+                src={logo.logoImage} 
+                alt={logo.clientName} 
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const textEl = e.currentTarget.parentElement?.querySelector('.logo-text');
+                  if (textEl) (textEl as HTMLElement).style.display = 'block';
+                }} 
+              />
+            ) : null}
+            <span className="logo-text" style={{ display: hasImage ? 'none' : 'block' }}>
+              {logo.clientName}
+            </span>
+          </div>
+        );
+      })}
+      {clientLogos.map((logo, index) => {
+        const hasImage = logo.logoImage && (logo.logoImage.startsWith('http') || logo.logoImage.startsWith('/'));
+        return (
+          <div className="client-logo-card" key={`logo-b-${logo.id}-${index}`} aria-hidden="true">
+            {hasImage ? (
+              <img 
+                src={logo.logoImage} 
+                alt={logo.clientName} 
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const textEl = e.currentTarget.parentElement?.querySelector('.logo-text');
+                  if (textEl) (textEl as HTMLElement).style.display = 'block';
+                }} 
+              />
+            ) : null}
+            <span className="logo-text" style={{ display: hasImage ? 'none' : 'block' }}>
+              {logo.clientName}
+            </span>
+          </div>
+        );
+      })}
     </div>
   </div>
 </section>
