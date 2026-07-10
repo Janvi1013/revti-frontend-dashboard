@@ -106,10 +106,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       });
 
       // GSAP reveal for impact cards
-      gsap.fromTo('.impact-metric-card', { opacity: 0, y: 24, scale: 0.96 }, {
-        opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.08, ease: 'power3.out',
-        scrollTrigger: { trigger: '.impact-card-grid', start: 'top 82%', once: true }
-      });
+      const impactGrid = document.querySelector('.impact-card-grid');
+      const impactCards = document.querySelectorAll('.impact-metric-card');
+      if (impactGrid && impactCards.length) {
+        gsap.fromTo(impactCards, { opacity: 0, y: 24, scale: 0.96 }, {
+          opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.08, ease: 'power3.out',
+          scrollTrigger: { trigger: impactGrid, start: 'top 82%', once: true }
+        });
+      }
     }
 
     // 2. Dynamic Prev / Next Navigation setup (Filtered by category)
