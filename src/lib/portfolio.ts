@@ -429,37 +429,6 @@ const normalizeImpactMetric = (item: any): PortfolioImpactMetric | null => {
   };
 };
 
-export const fetchClientLogos = async (): Promise<ClientLogo[]> => {
-  const { data, error } = await supabase
-    .from('client_logos')
-    .select('id, client_name, logo_image, display_order, is_active, deleted_at')
-    .order('display_order', { ascending: true });
-
-  if (error || !data?.length) return fallbackClientLogos;
-
-  // Only treat a value as an image URL if it looks like an actual image
-  const isImageUrl = (url: string): boolean => {
-    if (!url) return false;
-    // Supabase storage URLs are always valid images
-    if (url.includes('supabase.co/storage')) return true;
-    // Check for common image extensions
-    return /\.(png|jpe?g|webp|gif|svg|avif|ico)(\?.*)?$/i.test(url);
-  };
-
-  const logos = data
-    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
-    .map((item: any) => {
-      const rawImage = resolveAssetUrl(getStringValue(item, ['logo_image']));
-      return {
-        id: getStringValue(item, ['id']) || getStringValue(item, ['client_name']),
-        name: getStringValue(item, ['client_name']) || 'Client',
-        image: isImageUrl(rawImage) ? rawImage : '',
-      };
-    })
-    .filter(logo => logo.id && (logo.name || logo.image));
-
-  return logos.length ? logos : fallbackClientLogos;
-};
 
 export const normalizePortfolioProjectsFromApi = (data: PortfolioApiData): PortfolioProject[] => {
   const categoryNames = new Map<string, string>();
@@ -490,13 +459,22 @@ export const normalizeImpactMetricsFromApi = (data: PortfolioApiData): Portfolio
   .map(normalizeImpactMetric)
   .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
 
+const isImageUrl = (url: string): boolean => {
+  if (!url) return false;
+  if (url.includes('supabase.co/storage')) return true;
+  return /\.(png|jpe?g|webp|gif|svg|avif|ico)(\?.*)?$/i.test(url);
+};
+
 export const normalizeClientLogosFromApi = (data: PortfolioApiData): ClientLogo[] => sortByDisplayOrder(data.clientLogos as any[])
   .filter(isActiveRecord)
-  .map((item: any) => ({
-    id: getStringValue(item, ['id']) || getStringValue(item, ['client_name', 'name']),
-    name: getStringValue(item, ['client_name', 'name']) || 'Client logo',
-    image: resolveAssetUrl(getStringValue(item, ['logo_image', 'image', 'imageUrl'])),
-  }))
+  .map((item: any) => {
+    const rawImage = resolveAssetUrl(getStringValue(item, ['logo_image', 'image', 'imageUrl']));
+    return {
+      id: getStringValue(item, ['id']) || getStringValue(item, ['client_name', 'name']),
+      name: getStringValue(item, ['client_name', 'name']) || 'Client',
+      image: isImageUrl(rawImage) ? rawImage : '',
+    };
+  })
   .filter(logo => logo.id && (logo.name || logo.image));
 
 export const normalizeSocialLinksFromApi = (data: PortfolioApiData): SocialLink[] => sortByDisplayOrder(data.socialLinks as any[])
