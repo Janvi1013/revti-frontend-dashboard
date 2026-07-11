@@ -3,7 +3,21 @@
 import { useEffect, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
+import {
+  loadWebsiteContent,
+  type ClientLogo,
+  type ContactSectionContent,
+  type HomeHeroContent,
+  type PortfolioImpactMetric,
+  type PortfolioProject,
+  type SocialLink,
+  fallbackPortfolioProjects,
+  fallbackImpactMetrics,
+  fallbackHomeHeroContent,
+  fallbackContactSectionContent,
+  fallbackClientLogos,
+  fallbackSocialLinks
+} from '@/lib/portfolio';
 
 
 const renderHighlightedText = (title: string, highlight: string) => {
@@ -22,16 +36,16 @@ const renderHighlightedText = (title: string, highlight: string) => {
 };
 
 export default function HomePage() {
-  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>([]);
-  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>([]);
-  const [heroContent, setHeroContent] = useState<HomeHeroContent | null>(null);
-  const [contactContent, setContactContent] = useState<ContactSectionContent | null>(null);
-  const [clientLogos, setClientLogos] = useState<ClientLogo[]>([]);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>(fallbackImpactMetrics);
+  const [heroContent, setHeroContent] = useState<HomeHeroContent | null>(fallbackHomeHeroContent);
+  const [contactContent, setContactContent] = useState<ContactSectionContent | null>(fallbackContactSectionContent);
+  const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks);
 
-  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all']);
+  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all', ...Array.from(new Set(fallbackPortfolioProjects.map(p => p.category).filter(Boolean)))]);
   const [contentError, setContentError] = useState<string | null>(null);
-  const [isContentLoading, setIsContentLoading] = useState(true);
+  const [isContentLoading, setIsContentLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,7 +55,9 @@ export default function HomePage() {
       if (abortController) abortController.abort();
       abortController = new AbortController();
       const controller = abortController;
-      setIsContentLoading(true);
+      
+      const needsLoader = !heroContent || portfolioProjects.length === 0;
+      if (needsLoader) setIsContentLoading(true);
       setContentError(null);
       try {
         const result = await loadWebsiteContent({ signal: controller.signal });

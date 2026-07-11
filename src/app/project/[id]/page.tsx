@@ -4,34 +4,47 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, type PortfolioProject } from '@/lib/portfolio';
+import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const id = resolvedParams.id || 'websites';
 
-  const [projects, setProjects] = useState<PortfolioProject[]>([]);
-  const [project, setProject] = useState<PortfolioProject | null>(null);
+  const [projects, setProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
+  
+  // Try to find project immediately in fallbacks to prevent flash of loading screen on refresh/load
+  const initialProject = fallbackPortfolioProjects.find(item => item.id === id) || null;
+  const [project, setProject] = useState<PortfolioProject | null>(initialProject);
+  
   const [prevId, setPrevId] = useState('');
   const [nextId, setNextId] = useState('');
   const [projectNotFound, setProjectNotFound] = useState(false);
-  const [isProjectLoading, setIsProjectLoading] = useState(true);
+  const [isProjectLoading, setIsProjectLoading] = useState(initialProject === null);
   const [projectError, setProjectError] = useState<string | null>(null);
-
 
   useEffect(() => {
     let active = true;
     let abortController: AbortController | null = null;
 
+    // Immediately try to find project in existing projects array or fallbacks to prevent flash of loading screen
+    const foundProject = projects.find(item => item.id === id) || fallbackPortfolioProjects.find(item => item.id === id) || null;
+    if (foundProject) {
+      setProject(foundProject);
+      setIsProjectLoading(false);
+      setProjectNotFound(false);
+    } else {
+      setProject(null);
+      setIsProjectLoading(true);
+      setProjectNotFound(false);
+    }
+
     async function loadProjectContent() {
       if (abortController) abortController.abort();
       abortController = new AbortController();
       const controller = abortController;
-      setIsProjectLoading(true);
       setProjectError(null);
-      setProjectNotFound(false);
-      setProject(null);
+      
       try {
         const result = await loadWebsiteContent({ signal: controller.signal });
         if (!active || controller.signal.aborted) return;
@@ -39,8 +52,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         const nextProjects = result.ok ? result.content.projects : [];
         const matchedProject = nextProjects.find(item => item.id === id) || null;
         setProjects(nextProjects);
-        setProject(matchedProject);
-        setProjectNotFound(!matchedProject);
+        
+        if (matchedProject) {
+          setProject(matchedProject);
+          setProjectNotFound(false);
+        } else if (!foundProject) {
+          setProjectNotFound(true);
+        }
+        
         if (!result.ok) {
           setProjectError('Unable to load live website content.');
         }
