@@ -578,11 +578,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <div>
         <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">Overview</span></h2>
         <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>{project.overviewTitle || project.headline || project.title}</h2>
-        {(project.description || project.shortDescription || project.tagline) && (
-          <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{project.description || project.shortDescription || project.tagline}</p>
+        {project.shortDescription && (
+          <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{project.shortDescription}</p>
         )}
-        {project.compliance && (
-          <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{project.compliance}</p>
+        {project.description && (
+          <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{project.description}</p>
         )}
       </div>
       {overviewCards.length > 0 && (
