@@ -4,50 +4,71 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
+import { loadWebsiteContent, type PortfolioProject } from '@/lib/portfolio';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const id = resolvedParams.id || 'websites';
 
-  const [projects, setProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
-  const [project, setProject] = useState<PortfolioProject>(() => fallbackPortfolioProjects.find(item => item.id === id) || fallbackPortfolioProjects[0]);
-  const [prevId, setPrevId] = useState('seo');
-  const [nextId, setNextId] = useState('branding');
+  const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [project, setProject] = useState<PortfolioProject | null>(null);
+  const [prevId, setPrevId] = useState('');
+  const [nextId, setNextId] = useState('');
   const [projectNotFound, setProjectNotFound] = useState(false);
+  const [isProjectLoading, setIsProjectLoading] = useState(true);
+  const [projectError, setProjectError] = useState<string | null>(null);
 
 
   useEffect(() => {
-    const fallbackProject = fallbackPortfolioProjects.find(item => item.id === id) || fallbackPortfolioProjects[0];
-    setProject(fallbackProject);
-    setProjectNotFound(false);
-
     let active = true;
+    let abortController: AbortController | null = null;
 
-    async function loadPortfolioProjects() {
+    async function loadProjectContent() {
+      if (abortController) abortController.abort();
+      abortController = new AbortController();
+      const controller = abortController;
+      setIsProjectLoading(true);
+      setProjectError(null);
+      setProjectNotFound(false);
+      setProject(null);
       try {
-        const nextProjects = await fetchPortfolioProjects();
-        if (!nextProjects.length) return;
-        if (active) {
-          const matchedProject = nextProjects.find(item => item.id === id);
-          setProjects(nextProjects);
-          setProject(matchedProject || fallbackProject);
-          setProjectNotFound(!matchedProject);
+        const result = await loadWebsiteContent({ signal: controller.signal });
+        if (!active || controller.signal.aborted) return;
+
+        const nextProjects = result.ok ? result.content.projects : [];
+        const matchedProject = nextProjects.find(item => item.id === id) || null;
+        setProjects(nextProjects);
+        setProject(matchedProject);
+        setProjectNotFound(!matchedProject);
+        if (!result.ok) {
+          setProjectError('Unable to load live website content.');
         }
-      } catch (error) {
-        console.error('Unable to load portfolio project from backend API.', error);
+      } finally {
+        if (active) setIsProjectLoading(false);
       }
     }
 
-    loadPortfolioProjects();
+    loadProjectContent();
+
+    const handleFocus = () => loadProjectContent();
+    const handleOnline = () => loadProjectContent();
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
+    const refreshInterval = window.setInterval(loadProjectContent, 45000);
 
     return () => {
       active = false;
+      if (abortController) abortController.abort();
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
+      window.clearInterval(refreshInterval);
     };
   }, [id]);
 
   useEffect(() => {
+    if (!project) return;
+    const currentProject = project;
     // 1. GSAP ScrollTrigger register
     if (typeof window !== 'undefined' && (window as any).gsap && (window as any).ScrollTrigger) {
       const gsap = (window as any).gsap;
@@ -225,16 +246,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
 
     // 8. Lightbox Setup
-    const galMeta = (project.gallery.length ? project.gallery : [project.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
+    const galMeta = (currentProject.gallery.length ? currentProject.gallery : [currentProject.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
     let lbIdx = 0;
     function openLb(i: number) {
       lbIdx = i;
       const img = document.getElementById('lb-img') as HTMLImageElement;
       if (!img) return;
       img.src = galMeta[i].src;
-      img.alt = project.title + ' — ' + galMeta[i].l;
+      img.alt = currentProject.title + ' — ' + galMeta[i].l;
       const labelEl = document.getElementById('lb-label');
-      if (labelEl) labelEl.textContent = project.title + ' — ' + galMeta[i].l;
+      if (labelEl) labelEl.textContent = currentProject.title + ' — ' + galMeta[i].l;
       const ctrEl = document.getElementById('lb-ctr');
       if (ctrEl) ctrEl.textContent = (i + 1) + ' / ' + galMeta.length;
       const lbEl = document.getElementById('lb');
@@ -406,9 +427,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [id, router, projects, project.gallery, project.image, project.title]);
+  }, [id, router, projects, project]);
 
   useEffect(() => {
+    if (!project) return;
     // 1. Reveal Observer
     const ro = new IntersectionObserver(e => e.forEach(en => {
       if (en.isIntersecting) {
@@ -446,6 +468,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     };
   }, [project, projects]);
 
+  if (isProjectLoading) {
+    return <><style dangerouslySetInnerHTML={{ __html: projectCustomCss }} /><div className="modal-card" role="status" aria-live="polite">Loading live project content.</div></>;
+  }
+
+  if (!project || projectNotFound) {
+    return <><style dangerouslySetInnerHTML={{ __html: projectCustomCss }} /><div className="modal-card" role="status" aria-live="polite">{projectError || 'Project not found.'}<br /><a href="/" className="btn-primary">Back to Home</a></div></>;
+  }
+
   const galleryImages = project.gallery.length ? project.gallery : [project.image].filter((image): image is string => Boolean(image));
   const overviewCards = [
     { icon: '🎯', title: 'The Challenge', text: project.challenge },
@@ -459,7 +489,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: projectCustomCss }} />
-      <div className="sr-only" role="status" aria-live="polite">{projectNotFound ? 'Project not found. Showing fallback project content.' : 'Project content loaded.'}</div>
+      <div className="sr-only" role="status" aria-live="polite">{projectError || 'Project content loaded.'}</div>
       
 {/* ══ CURSOR (max z-index, always on top) ══ */}
 <div id="cur-dot"></div>

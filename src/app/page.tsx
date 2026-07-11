@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { fetchClientLogos, fetchContactSectionContent, fetchHomeHeroContent, fetchImpactMetrics, fetchPortfolioCategories, fetchPortfolioProjects, fetchSocialLinks, fallbackClientLogos, fallbackContactSectionContent, fallbackHomeHeroContent, fallbackImpactMetrics, fallbackPortfolioProjects, fallbackSocialLinks, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
+import { loadWebsiteContent, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
 
 
 const renderHighlightedText = (title: string, highlight: string) => {
@@ -22,12 +22,12 @@ const renderHighlightedText = (title: string, highlight: string) => {
 };
 
 export default function HomePage() {
-  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(fallbackPortfolioProjects);
-  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>(fallbackImpactMetrics);
-  const [heroContent, setHeroContent] = useState<HomeHeroContent>(fallbackHomeHeroContent);
-  const [contactContent, setContactContent] = useState<ContactSectionContent>(fallbackContactSectionContent);
-  const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks);
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>([]);
+  const [impactMetrics, setImpactMetrics] = useState<PortfolioImpactMetric[]>([]);
+  const [heroContent, setHeroContent] = useState<HomeHeroContent | null>(null);
+  const [contactContent, setContactContent] = useState<ContactSectionContent | null>(null);
+  const [clientLogos, setClientLogos] = useState<ClientLogo[]>([]);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
 
   const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all']);
   const [contentError, setContentError] = useState<string | null>(null);
@@ -35,48 +35,48 @@ export default function HomePage() {
 
   useEffect(() => {
     let active = true;
+    let abortController: AbortController | null = null;
 
-    async function loadHomeContent() {
+    async function loadContent() {
+      if (abortController) abortController.abort();
+      abortController = new AbortController();
+      const controller = abortController;
       setIsContentLoading(true);
       setContentError(null);
       try {
-        const [nextProjects, nextCategories, nextHeroContent, nextContactContent, nextClientLogos, nextSocialLinks] = await Promise.all([
-          fetchPortfolioProjects(),
-          fetchPortfolioCategories(),
-          fetchHomeHeroContent(),
-          fetchContactSectionContent(),
-          fetchClientLogos(),
-          fetchSocialLinks(),
-        ]);
-        const projectsForMetrics = nextProjects.length ? nextProjects : fallbackPortfolioProjects;
-        if (active && nextProjects.length) {
-          setPortfolioProjects(nextProjects);
-        }
+        const result = await loadWebsiteContent({ signal: controller.signal });
+        if (!active || controller.signal.aborted) return;
 
-        if (active) {
-          setPortfolioCategories(['all', ...Array.from(new Set(nextCategories.filter(Boolean)))]);
-          if (nextHeroContent) setHeroContent(nextHeroContent);
-          if (nextContactContent) setContactContent(nextContactContent);
-          if (nextClientLogos.length) setClientLogos(nextClientLogos);
-          if (nextSocialLinks.length) setSocialLinks(nextSocialLinks);
-        }
+        setPortfolioProjects(result.content.projects);
+        setPortfolioCategories(['all', ...Array.from(new Set(result.content.categories.filter(Boolean)))]);
+        setHeroContent(result.content.heroContent);
+        setContactContent(result.content.contactContent);
+        setImpactMetrics(result.content.impactMetrics);
+        setClientLogos(result.content.clientLogos);
+        setSocialLinks(result.content.socialLinks);
 
-        const nextImpactMetrics = await fetchImpactMetrics(projectsForMetrics);
-        if (active && nextImpactMetrics.length) {
-          setImpactMetrics(nextImpactMetrics);
+        if (!result.ok) {
+          setContentError('Unable to load live website content. Showing temporary fallback content.');
         }
-      } catch (error) {
-        console.error('Unable to load portfolio content from backend API.', error);
-        if (active) setContentError('Live content is temporarily unavailable. Showing fallback content.');
       } finally {
         if (active) setIsContentLoading(false);
       }
     }
 
-    loadHomeContent();
+    loadContent();
+
+    const handleFocus = () => loadContent();
+    const handleOnline = () => loadContent();
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
+    const refreshInterval = window.setInterval(loadContent, 45000);
 
     return () => {
       active = false;
+      if (abortController) abortController.abort();
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
+      window.clearInterval(refreshInterval);
     };
   }, []);
 
@@ -403,12 +403,12 @@ export default function HomePage() {
   <div className="orb" style={{ width: "280px", height: "280px", bottom: "-50px", left: "40%", background: "rgba(6,182,212,.06)", animationDelay: "-8s" }}></div>
   <div className="wrap" style={{ width: "100%" }}>
     <div className="hero-content">
-      <div className="hero-ey"><span className="ey-dot"></span> {heroContent.eyebrow}</div>
-      <h1 className="hero-h1">{renderHighlightedText(heroContent.title, heroContent.highlight)}</h1>
-      <p className="hero-sub">{heroContent.subtitle}</p>
+      <div className="hero-ey"><span className="ey-dot"></span> {heroContent?.eyebrow || ''}</div>
+      <h1 className="hero-h1">{heroContent ? renderHighlightedText(heroContent.title, heroContent.highlight) : (isContentLoading ? 'Loading live content' : 'No hero content available')}</h1>
+      <p className="hero-sub">{heroContent?.subtitle || ''}</p>
       <div className="hero-btns">
-        <a href={heroContent.primaryHref} className="btn-primary" target={heroContent.primaryNewTab ? '_blank' : undefined} rel={heroContent.primaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent.primaryIcon}`}></i> {heroContent.primaryLabel}</a>
-        <a href={heroContent.secondaryHref} className="btn-ghost" target={heroContent.secondaryNewTab ? '_blank' : undefined} rel={heroContent.secondaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent.secondaryIcon}`}></i> {heroContent.secondaryLabel}</a>
+        <a href={heroContent?.primaryHref || '#portfolio'} className="btn-primary" target={heroContent?.primaryNewTab ? '_blank' : undefined} rel={heroContent?.primaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent?.primaryIcon || ''}`}></i> {heroContent?.primaryLabel || (isContentLoading ? 'Loading' : 'Unavailable')}</a>
+        <a href={heroContent?.secondaryHref || '#contact'} className="btn-ghost" target={heroContent?.secondaryNewTab ? '_blank' : undefined} rel={heroContent?.secondaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent?.secondaryIcon || ''}`}></i> {heroContent?.secondaryLabel || (isContentLoading ? 'Loading' : 'Unavailable')}</a>
       </div>
     </div>
   </div>
@@ -419,6 +419,7 @@ export default function HomePage() {
 <section className="impact" id="impact">
   <div className="wrap">
     <div className="impact-grid">
+      {impactMetrics.length === 0 && !isContentLoading && <div className="impact-item rv"><span className="impact-label">No impact numbers available.</span></div>}
       {impactMetrics.map((metric, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={`${metric.label}-${index}`}>
           <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
@@ -458,6 +459,7 @@ export default function HomePage() {
 
     {/* Project Grid */}
     <div className="project-grid" id="projectGrid">
+      {portfolioProjects.length === 0 && !isContentLoading && <div className="project-empty-state">No published projects available.</div>}
       {portfolioProjects.map(project => (
         <a href={`/project/${project.id}`} className="project-card" data-category={project.category} key={project.id}>
           <div className="card-visual">
@@ -499,6 +501,7 @@ export default function HomePage() {
   </div>
   <div className="logo-carousel" aria-label="Client logo carousel">
     <div className="logo-carousel-track">
+      {clientLogos.length === 0 && !isContentLoading && <div className="client-logo-card"><span>No client logos available.</span></div>}
       {clientLogos.map((logo) => (
         <div className="client-logo-card" key={`logo-a-${logo.id}`} aria-label={logo.name}>
           {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
@@ -517,12 +520,13 @@ export default function HomePage() {
 <section className="contact-cta" id="contact" aria-labelledby="contact-cta-title">
   <div className="wrap">
     <div className="contact-cta-box rv">
-      <h2 className="cta-title" id="contact-cta-title">{renderHighlightedText(contactContent.heading, contactContent.highlight)}</h2>
+      <h2 className="cta-title" id="contact-cta-title">{contactContent ? renderHighlightedText(contactContent.heading, contactContent.highlight) : (isContentLoading ? 'Loading contact content' : 'No contact content available')}</h2>
       <div className="cta-row">
         <span className="cta-line" aria-hidden="true"></span>
-        <a href={contactContent.buttonHref} className="btn-primary">{contactContent.buttonLabel} <i className="fa-solid fa-arrow-right"></i></a>
+        <a href={contactContent?.buttonHref || '#contact'} className="btn-primary">{contactContent?.buttonLabel || (isContentLoading ? 'Loading' : 'Unavailable')} <i className="fa-solid fa-arrow-right"></i></a>
       </div>
       <div className="cta-socials" aria-label="Social links">
+        {socialLinks.length === 0 && !isContentLoading && <span>No social links available.</span>}
         {socialLinks.map((social) => (
           <a href={social.href} key={social.id}>{social.platform} <i className="fa-solid fa-arrow-up-right-from-square"></i></a>
         ))}
