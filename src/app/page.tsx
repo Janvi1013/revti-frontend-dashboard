@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
-import { fetchClientLogos, fetchContactSectionContent, fetchHomeHeroContent, fetchImpactMetrics, fetchPortfolioProjects, fetchSocialLinks, fallbackClientLogos, fallbackContactSectionContent, fallbackHomeHeroContent, fallbackImpactMetrics, fallbackPortfolioProjects, fallbackSocialLinks, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
-import { supabase } from '@/lib/supabase';
+import { fetchClientLogos, fetchContactSectionContent, fetchHomeHeroContent, fetchImpactMetrics, fetchPortfolioCategories, fetchPortfolioProjects, fetchSocialLinks, fallbackClientLogos, fallbackContactSectionContent, fallbackHomeHeroContent, fallbackImpactMetrics, fallbackPortfolioProjects, fallbackSocialLinks, type ClientLogo, type ContactSectionContent, type HomeHeroContent, type PortfolioImpactMetric, type PortfolioProject, type SocialLink } from '@/lib/portfolio';
 
 
 const renderHighlightedText = (title: string, highlight: string) => {
@@ -30,18 +29,20 @@ export default function HomePage() {
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(fallbackClientLogos);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks);
 
-  const portfolioCategories = useMemo(() => {
-    const categories = portfolioProjects.map(project => project.category).filter(Boolean);
-    return ['all', ...Array.from(new Set(categories))];
-  }, [portfolioProjects]);
+  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all']);
+  const [contentError, setContentError] = useState<string | null>(null);
+  const [isContentLoading, setIsContentLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     async function loadHomeContent() {
+      setIsContentLoading(true);
+      setContentError(null);
       try {
-        const [nextProjects, nextHeroContent, nextContactContent, nextClientLogos, nextSocialLinks] = await Promise.all([
+        const [nextProjects, nextCategories, nextHeroContent, nextContactContent, nextClientLogos, nextSocialLinks] = await Promise.all([
           fetchPortfolioProjects(),
+          fetchPortfolioCategories(),
           fetchHomeHeroContent(),
           fetchContactSectionContent(),
           fetchClientLogos(),
@@ -53,6 +54,7 @@ export default function HomePage() {
         }
 
         if (active) {
+          setPortfolioCategories(['all', ...Array.from(new Set(nextCategories.filter(Boolean)))]);
           if (nextHeroContent) setHeroContent(nextHeroContent);
           if (nextContactContent) setContactContent(nextContactContent);
           if (nextClientLogos.length) setClientLogos(nextClientLogos);
@@ -64,38 +66,17 @@ export default function HomePage() {
           setImpactMetrics(nextImpactMetrics);
         }
       } catch (error) {
-        console.error('Unable to load portfolio projects from Supabase.', error);
+        console.error('Unable to load portfolio content from backend API.', error);
+        if (active) setContentError('Live content is temporarily unavailable. Showing fallback content.');
+      } finally {
+        if (active) setIsContentLoading(false);
       }
     }
 
     loadHomeContent();
 
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleRefresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(loadHomeContent, 250);
-    };
-
-    const realtimeChannel = supabase
-      .channel('homepage-live-content')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_categories' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_numbers' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'homepage_stats' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'impact_metrics' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_logos' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_links' }, scheduleRefresh)
-      .subscribe();
-
-
-    const pollingFallback = window.setInterval(loadHomeContent, 15000);
-
     return () => {
       active = false;
-      if (refreshTimer) clearTimeout(refreshTimer);
-      window.clearInterval(pollingFallback);
-      supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -388,6 +369,7 @@ export default function HomePage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: indexCustomCss }} />
+      <div className="sr-only" role="status" aria-live="polite">{isContentLoading ? 'Loading live site content.' : contentError || 'Live site content loaded.'}</div>
       
 {/* <div className="cur-dot" id="curDot"></div>
 <div className="cur-ring" id="curRing"></div>
@@ -425,8 +407,8 @@ export default function HomePage() {
       <h1 className="hero-h1">{renderHighlightedText(heroContent.title, heroContent.highlight)}</h1>
       <p className="hero-sub">{heroContent.subtitle}</p>
       <div className="hero-btns">
-        <a href={heroContent.primaryHref} className="btn-primary"><i className={`fa-solid ${heroContent.primaryIcon}`}></i> {heroContent.primaryLabel}</a>
-        <a href={heroContent.secondaryHref} className="btn-ghost"><i className={`fa-solid ${heroContent.secondaryIcon}`}></i> {heroContent.secondaryLabel}</a>
+        <a href={heroContent.primaryHref} className="btn-primary" target={heroContent.primaryNewTab ? '_blank' : undefined} rel={heroContent.primaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent.primaryIcon}`}></i> {heroContent.primaryLabel}</a>
+        <a href={heroContent.secondaryHref} className="btn-ghost" target={heroContent.secondaryNewTab ? '_blank' : undefined} rel={heroContent.secondaryNewTab ? 'noopener noreferrer' : undefined}><i className={`fa-solid ${heroContent.secondaryIcon}`}></i> {heroContent.secondaryLabel}</a>
       </div>
     </div>
   </div>

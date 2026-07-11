@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
 import { fetchPortfolioProjects, fallbackPortfolioProjects, type PortfolioProject } from '@/lib/portfolio';
-import { supabase } from '@/lib/supabase';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -16,11 +15,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [project, setProject] = useState<PortfolioProject>(() => fallbackPortfolioProjects.find(item => item.id === id) || fallbackPortfolioProjects[0]);
   const [prevId, setPrevId] = useState('seo');
   const [nextId, setNextId] = useState('branding');
+  const [projectNotFound, setProjectNotFound] = useState(false);
 
 
   useEffect(() => {
     const fallbackProject = fallbackPortfolioProjects.find(item => item.id === id) || fallbackPortfolioProjects[0];
     setProject(fallbackProject);
+    setProjectNotFound(false);
 
     let active = true;
 
@@ -29,35 +30,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         const nextProjects = await fetchPortfolioProjects();
         if (!nextProjects.length) return;
         if (active) {
+          const matchedProject = nextProjects.find(item => item.id === id);
           setProjects(nextProjects);
-          setProject(nextProjects.find(item => item.id === id) || nextProjects[0]);
+          setProject(matchedProject || fallbackProject);
+          setProjectNotFound(!matchedProject);
         }
       } catch (error) {
-        console.error('Unable to load portfolio project from Supabase.', error);
+        console.error('Unable to load portfolio project from backend API.', error);
       }
     }
 
     loadPortfolioProjects();
 
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleRefresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(loadPortfolioProjects, 250);
-    };
-
-    const realtimeChannel = supabase
-      .channel(`project-live-content-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_categories' }, scheduleRefresh)
-      .subscribe();
-
-    const pollingFallback = window.setInterval(loadPortfolioProjects, 15000);
-
     return () => {
       active = false;
-      if (refreshTimer) clearTimeout(refreshTimer);
-      window.clearInterval(pollingFallback);
-      supabase.removeChannel(realtimeChannel);
     };
   }, [id]);
 
@@ -473,6 +459,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: projectCustomCss }} />
+      <div className="sr-only" role="status" aria-live="polite">{projectNotFound ? 'Project not found. Showing fallback project content.' : 'Project content loaded.'}</div>
       
 {/* ══ CURSOR (max z-index, always on top) ══ */}
 <div id="cur-dot"></div>

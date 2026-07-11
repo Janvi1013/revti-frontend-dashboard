@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { fetchPortfolioApiData, getBackendBaseUrl } from './api/portfolio';
+import type { PortfolioApiData, ProjectCategory } from './api/types';
 
 export type PortfolioStat = {
   num?: string;
@@ -29,9 +30,11 @@ export type HomeHeroContent = {
   primaryLabel: string;
   primaryHref: string;
   primaryIcon: string;
+  primaryNewTab?: boolean;
   secondaryLabel: string;
   secondaryHref: string;
   secondaryIcon: string;
+  secondaryNewTab?: boolean;
 };
 
 export type ContactSectionContent = {
@@ -104,7 +107,6 @@ export const fallbackPortfolioProjects: PortfolioProject[] = [
   { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))', gallery: [], stats: [], process: [], feedback: [] },
 ];
 
-const getBackendBaseUrl = (): string => process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '') || '';
 
 export const fallbackImpactMetrics: PortfolioImpactMetric[] = [
   { value: 10, displayValue: '10+', suffix: '+', label: 'Years of Experience', sub: 'Delivering results since 2018' },
@@ -326,34 +328,42 @@ export const getPortfolioApiUrl = (path = '/api/portfolio') => {
   return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 };
 
+const isPublishedProject = (item: any) => !item?.status || item.status === 'published';
+
+export const getCategoryLabel = (category: ProjectCategory): string => (
+  getStringValue(category, ['name', 'title', 'label']) || getStringValue(category, ['slug', 'id'])
+);
+
+export const getCategorySlug = (category: ProjectCategory): string => (
+  getStringValue(category, ['slug', 'cat', 'id']) || getCategoryLabel(category)
+);
+
+export const fetchPortfolioContent = async (): Promise<PortfolioApiData> => fetchPortfolioApiData();
+
+export const normalizePortfolioProjectsFromApi = (data: PortfolioApiData): PortfolioProject[] => {
+  const categoryNames = new Map<string, string>();
+  data.categories.forEach((category) => {
+    const label = getCategoryLabel(category);
+    [getCategorySlug(category), getStringValue(category, ['id'])].filter(Boolean).forEach((key) => {
+      if (label) categoryNames.set(key, label);
+    });
+  });
+
+  return data.projects
+    .filter(isPublishedProject)
+    .sort((a: any, b: any) => (Number(a?.sequence) || 0) - (Number(b?.sequence) || 0))
+    .map((item, index) => normalizePortfolioProject({
+      ...item,
+      category_name: categoryNames.get(getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory'])) || item?.category_name,
+    }, index))
+    .filter((project): project is PortfolioProject => Boolean(project));
+};
+
 export const fetchPortfolioProjects = async (): Promise<PortfolioProject[]> => {
   try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('status', 'published')
-      .order('sequence', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching projects from Supabase:', error);
-      return [];
-    }
-
-    if (!data || data.length === 0) return [];
-
-    const { data: categories } = await supabase
-      .from('project_categories')
-      .select('name, slug');
-    const categoryNames = new Map((categories || []).map((category: any) => [category.slug, category.name]));
-
-    return data
-      .map((item, index) => normalizePortfolioProject({
-        ...item,
-        category_name: categoryNames.get(item?.cat) || item?.category_name,
-      }, index))
-      .filter((project): project is PortfolioProject => Boolean(project));
+    return normalizePortfolioProjectsFromApi(await fetchPortfolioContent());
   } catch (err) {
-    console.error('Unexpected error fetching projects from Supabase:', err);
+    console.error('Unexpected error fetching projects from backend API:', err);
     return [];
   }
 };
@@ -375,24 +385,16 @@ export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Pro
     };
   };
 
-  for (const { table, order } of [
-    { table: 'impact_numbers', order: 'display_order' },
-    { table: 'homepage_stats', order: 'sequence' },
-    { table: 'impact_metrics', order: 'sequence' },
-  ]) {
-    try {
-      const { data, error } = await supabase.from(table).select('*').order(order, { ascending: true });
-
-      if (!error && data?.length) {
-        const metrics = data
-          .filter((item: any) => item?.is_active !== false && item?.active !== false && !item?.deleted_at)
-          .map(normalizeMetric)
-          .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
-        if (metrics.length) return metrics;
-      }
-    } catch {
-      // Try the next known stats table name, then fall back below.
-    }
+  try {
+    const data = await fetchPortfolioContent();
+    const metrics = data.impactNumbers
+      .filter((item: any) => item?.is_active !== false && item?.active !== false && !item?.deleted_at)
+      .sort((a: any, b: any) => (Number(a?.display_order ?? a?.sequence) || 0) - (Number(b?.display_order ?? b?.sequence) || 0))
+      .map(normalizeMetric)
+      .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
+    if (metrics.length) return metrics;
+  } catch (err) {
+    console.error('Unexpected error fetching impact numbers from backend API:', err);
   }
 
   if (!projects.length) return fallbackImpactMetrics;
@@ -412,89 +414,108 @@ export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Pro
 };
 
 const getSiteSettingValue = async (key: string): Promise<any | null> => {
-  const { data, error } = await supabase
-    .from('site_settings')
-    .select('value')
-    .eq('key', key)
-    .single();
-
-  if (error) return null;
-  return data?.value || null;
+  const data = await fetchPortfolioContent();
+  return (data.siteSettings as any)?.[key] || null;
 };
 
 export const fetchHomeHeroContent = async (): Promise<HomeHeroContent | null> => {
-  const value = await getSiteSettingValue('hero_section');
-  if (!value) return null;
+  try {
+    const value = await getSiteSettingValue('hero_section');
+    if (!value) return null;
 
-  const buttons = Array.isArray(value.buttons) ? value.buttons : [];
-  const primaryButton = buttons[0] || {};
-  const secondaryButton = buttons[1] || {};
+    const buttons = Array.isArray(value.buttons) ? value.buttons : [];
+    const primaryButton = buttons[0] || {};
+    const secondaryButton = buttons[1] || {};
 
-  return {
-    eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']) || fallbackHomeHeroContent.eyebrow,
-    title: getStringValue(value, ['heading', 'title', 'headline']) || fallbackHomeHeroContent.title,
-    highlight: getStringValue(value, ['heading_highlight', 'highlight', 'title_highlight']) || fallbackHomeHeroContent.highlight,
-    subtitle: getStringValue(value, ['sub_heading', 'subtitle', 'subTitle', 'description', 'text']) || fallbackHomeHeroContent.subtitle,
-    primaryLabel: getStringValue(primaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.primaryLabel,
-    primaryHref: getStringValue(primaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.primaryHref,
-    primaryIcon: getStringValue(primaryButton, ['icon']) || fallbackHomeHeroContent.primaryIcon,
-    secondaryLabel: getStringValue(secondaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.secondaryLabel,
-    secondaryHref: getStringValue(secondaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.secondaryHref,
-    secondaryIcon: getStringValue(secondaryButton, ['icon']) || fallbackHomeHeroContent.secondaryIcon,
-  };
+    return {
+      eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']) || fallbackHomeHeroContent.eyebrow,
+      title: getStringValue(value, ['heading', 'title', 'headline']) || fallbackHomeHeroContent.title,
+      highlight: getStringValue(value, ['heading_highlight', 'highlight', 'title_highlight']) || fallbackHomeHeroContent.highlight,
+      subtitle: getStringValue(value, ['sub_heading', 'subtitle', 'subTitle', 'description', 'text']) || fallbackHomeHeroContent.subtitle,
+      primaryLabel: getStringValue(primaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.primaryLabel,
+      primaryHref: getStringValue(primaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.primaryHref,
+      primaryIcon: getStringValue(primaryButton, ['icon']) || fallbackHomeHeroContent.primaryIcon,
+      primaryNewTab: primaryButton?.new_tab === true,
+      secondaryLabel: getStringValue(secondaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.secondaryLabel,
+      secondaryHref: getStringValue(secondaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.secondaryHref,
+      secondaryIcon: getStringValue(secondaryButton, ['icon']) || fallbackHomeHeroContent.secondaryIcon,
+      secondaryNewTab: secondaryButton?.new_tab === true,
+    };
+  } catch (err) {
+    console.error('Unexpected error fetching hero content from backend API:', err);
+    return null;
+  }
 };
 
 export const fetchContactSectionContent = async (): Promise<ContactSectionContent | null> => {
-  const value = await getSiteSettingValue('contact_section');
-  if (!value) return null;
-  const button = value.button || {};
+  try {
+    const value = await getSiteSettingValue('contact_section');
+    if (!value) return null;
+    const button = value.button || {};
 
-  return {
-    heading: getStringValue(value, ['heading', 'title']) || fallbackContactSectionContent.heading,
-    highlight: getStringValue(value, ['heading_highlight', 'highlight']) || fallbackContactSectionContent.highlight,
-    buttonLabel: getStringValue(button, ['text', 'label', 'title']) || fallbackContactSectionContent.buttonLabel,
-    buttonHref: getStringValue(button, ['link', 'href', 'url']) || fallbackContactSectionContent.buttonHref,
-  };
+    return {
+      heading: getStringValue(value, ['heading', 'title']) || fallbackContactSectionContent.heading,
+      highlight: getStringValue(value, ['heading_highlight', 'highlight']) || fallbackContactSectionContent.highlight,
+      buttonLabel: getStringValue(button, ['text', 'label', 'title']) || fallbackContactSectionContent.buttonLabel,
+      buttonHref: getStringValue(button, ['link', 'href', 'url']) || fallbackContactSectionContent.buttonHref,
+    };
+  } catch (err) {
+    console.error('Unexpected error fetching contact content from backend API:', err);
+    return null;
+  }
+};
+
+export const fetchPortfolioCategories = async (): Promise<string[]> => {
+  try {
+    const data = await fetchPortfolioContent();
+    return data.categories
+      .filter((item: any) => item?.is_active !== false && item?.active !== false && item?.status !== 'draft' && !item?.deleted_at)
+      .sort((a: any, b: any) => (Number(a?.display_order ?? a?.sequence) || 0) - (Number(b?.display_order ?? b?.sequence) || 0))
+      .map(getCategoryLabel)
+      .filter(Boolean);
+  } catch (err) {
+    console.error('Unexpected error fetching categories from backend API:', err);
+    return [];
+  }
 };
 
 export const fetchClientLogos = async (): Promise<ClientLogo[]> => {
-  const { data, error } = await supabase
-    .from('client_logos')
-    .select('id, client_name, logo_image, display_order, is_active, deleted_at')
-    .order('display_order', { ascending: true });
+  try {
+    const data = await fetchPortfolioContent();
+    const logos = data.clientLogos
+      .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
+      .sort((a: any, b: any) => (Number(a?.display_order ?? a?.sequence) || 0) - (Number(b?.display_order ?? b?.sequence) || 0))
+      .map((item: any) => ({
+        id: getStringValue(item, ['id']) || getStringValue(item, ['client_name', 'name']),
+        name: getStringValue(item, ['client_name', 'name']) || 'Client logo',
+        image: resolveAssetUrl(getStringValue(item, ['logo_image', 'image', 'imageUrl'])),
+      }))
+      .filter(logo => logo.id && (logo.name || logo.image));
 
-  if (error || !data?.length) return fallbackClientLogos;
-
-  const logos = data
-    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
-    .map((item: any) => ({
-      id: getStringValue(item, ['id']) || getStringValue(item, ['client_name']),
-      name: getStringValue(item, ['client_name']) || 'Client logo',
-      image: resolveAssetUrl(getStringValue(item, ['logo_image'])),
-    }))
-    .filter(logo => logo.id && (logo.name || logo.image));
-
-  return logos.length ? logos : fallbackClientLogos;
+    return logos.length ? logos : fallbackClientLogos;
+  } catch (err) {
+    console.error('Unexpected error fetching client logos from backend API:', err);
+    return fallbackClientLogos;
+  }
 };
 
 export const fetchSocialLinks = async (): Promise<SocialLink[]> => {
-  const { data, error } = await supabase
-    .from('social_links')
-    .select('id, platform, profile_url, icon, display_order, is_active, deleted_at')
-    .order('display_order', { ascending: true });
+  try {
+    const data = await fetchPortfolioContent();
+    const links = data.socialLinks
+      .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
+      .sort((a: any, b: any) => (Number(a?.display_order ?? a?.sequence) || 0) - (Number(b?.display_order ?? b?.sequence) || 0))
+      .map((item: any) => ({
+        id: getStringValue(item, ['id']) || getStringValue(item, ['platform']),
+        platform: getStringValue(item, ['platform']),
+        href: getStringValue(item, ['profile_url', 'href', 'url']),
+        icon: getStringValue(item, ['icon']),
+      }))
+      .filter(link => link.id && link.platform && link.href);
 
-  if (error || !data?.length) return fallbackSocialLinks;
-
-  const links = data
-    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
-    .map((item: any) => ({
-      id: getStringValue(item, ['id']) || getStringValue(item, ['platform']),
-      platform: getStringValue(item, ['platform']),
-      href: getStringValue(item, ['profile_url']),
-      icon: getStringValue(item, ['icon']),
-    }))
-    .filter(link => link.id && link.platform && link.href);
-
-  return links.length ? links : fallbackSocialLinks;
+    return links.length ? links : fallbackSocialLinks;
+  } catch (err) {
+    console.error('Unexpected error fetching social links from backend API:', err);
+    return fallbackSocialLinks;
+  }
 };
-
