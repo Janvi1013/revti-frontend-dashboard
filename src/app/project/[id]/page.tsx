@@ -546,7 +546,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <div className="proj-cat-pill">{project.category}{project.industry ? ` · ${project.industry}` : ''}</div>
       {/* ONE-LINE HEADING */}
       <h1 className="proj-h1">
-        {project.title} <span className="grad">{project.year || ''}</span>
+        {project.title}
       </h1>
       <p className="proj-sub">{project.tagline || project.shortDescription || project.description}</p>
       <div className="proj-meta-row">
