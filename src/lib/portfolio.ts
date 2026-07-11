@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { fetchPortfolioApiData, getBackendBaseUrl } from './api/portfolio';
+import type { PortfolioApiData, ProjectCategory } from './api/types';
 
 export type PortfolioStat = {
   num?: string;
@@ -29,9 +30,11 @@ export type HomeHeroContent = {
   primaryLabel: string;
   primaryHref: string;
   primaryIcon: string;
+  primaryNewTab?: boolean;
   secondaryLabel: string;
   secondaryHref: string;
   secondaryIcon: string;
+  secondaryNewTab?: boolean;
 };
 
 export type ContactSectionContent = {
@@ -53,6 +56,20 @@ export type SocialLink = {
   href: string;
   icon?: string;
 };
+
+export type WebsiteContent = {
+  projects: PortfolioProject[];
+  categories: string[];
+  heroContent: HomeHeroContent | null;
+  contactContent: ContactSectionContent | null;
+  impactMetrics: PortfolioImpactMetric[];
+  clientLogos: ClientLogo[];
+  socialLinks: SocialLink[];
+};
+
+export type WebsiteContentLoadResult =
+  | { ok: true; content: WebsiteContent; usedFallback: false }
+  | { ok: false; content: WebsiteContent; usedFallback: true; error: Error };
 
 export type PortfolioProcessStep = {
   icon?: string;
@@ -104,7 +121,6 @@ export const fallbackPortfolioProjects: PortfolioProject[] = [
   { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))', gallery: [], stats: [], process: [], feedback: [] },
 ];
 
-const getBackendBaseUrl = (): string => process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '') || '';
 
 export const fallbackImpactMetrics: PortfolioImpactMetric[] = [
   { value: 10, displayValue: '10+', suffix: '+', label: 'Years of Experience', sub: 'Delivering results since 2018' },
@@ -163,23 +179,41 @@ const getStringValue = (source: any, keys: string[]): string => {
   return '';
 };
 
+const looksLikeImageUrl = (value: string): boolean => {
+  if (!value) return false;
+  if (/^(data:image\/|blob:)/.test(value)) return true;
+  if (/\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(value)) return true;
+  if (/\/storage\/v1\/object\/public\//.test(value)) return true;
+  if (/\/object\/public\//.test(value)) return true;
+  return false;
+};
+
 const resolveAssetUrl = (value: string): string => {
   if (!value) return '';
   const trimmed = value.trim();
+  let resolved = '';
   // Already absolute URL (Supabase storage, CDN, external) — return as-is
-  if (/^https?:\/\//.test(trimmed)) return trimmed;
+  if (/^https?:\/\//.test(trimmed)) resolved = trimmed;
   // Data/blob URIs
-  if (/^(data:|blob:)/.test(trimmed)) return trimmed;
+  else if (/^(data:|blob:)/.test(trimmed)) resolved = trimmed;
   // Root-relative: only prepend backend if it looks like a server upload path
-  if (trimmed.startsWith('/')) {
+  else if (trimmed.startsWith('/')) {
     if (/^\/(uploads|media|storage|files|assets)/.test(trimmed)) {
-      const apiBaseUrl = getBackendBaseUrl();
-      return apiBaseUrl ? `${apiBaseUrl}${trimmed}` : trimmed;
+      try {
+        const apiBaseUrl = getBackendBaseUrl();
+        resolved = apiBaseUrl ? `${apiBaseUrl}${trimmed}` : trimmed;
+      } catch {
+        resolved = trimmed;
+      }
+    } else {
+      resolved = trimmed; // local public path — keep as-is
     }
-    return trimmed; // local public path — keep as-is
+  } else {
+    // Relative path — assume it's a public asset
+    resolved = `/${trimmed.replace(/^\/+/, '')}`;
   }
-  // Relative path — assume it's a public asset
-  return `/${trimmed.replace(/^\/+/, '')}`;
+
+  return looksLikeImageUrl(resolved) ? resolved : '';
 };
 
 const splitMetricDisplayValue = (displayValue: string) => {
@@ -326,175 +360,158 @@ export const getPortfolioApiUrl = (path = '/api/portfolio') => {
   return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 };
 
-export const fetchPortfolioProjects = async (): Promise<PortfolioProject[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('status', 'published')
-      .order('sequence', { ascending: true });
+const isPublishedProject = (item: any) => item?.status === 'published';
 
-    if (error) {
-      console.error('Error fetching projects from Supabase:', error);
-      return [];
-    }
+const isActiveRecord = (item: any) => item?.is_active !== false && item?.active !== false && !item?.deleted_at;
 
-    if (!data || data.length === 0) return [];
+const sortByDisplayOrder = <T extends Record<string, any>>(items: T[]): T[] => [...items].sort(
+  (a, b) => (Number(a?.display_order ?? a?.sequence) || 0) - (Number(b?.display_order ?? b?.sequence) || 0)
+);
 
-    const { data: categories } = await supabase
-      .from('project_categories')
-      .select('name, slug');
-    const categoryNames = new Map((categories || []).map((category: any) => [category.slug, category.name]));
+export const getCategoryLabel = (category: ProjectCategory): string => (
+  getStringValue(category, ['name', 'title', 'label']) || getStringValue(category, ['slug', 'id'])
+);
 
-    return data
-      .map((item, index) => normalizePortfolioProject({
-        ...item,
-        category_name: categoryNames.get(item?.cat) || item?.category_name,
-      }, index))
-      .filter((project): project is PortfolioProject => Boolean(project));
-  } catch (err) {
-    console.error('Unexpected error fetching projects from Supabase:', err);
-    return [];
-  }
-};
+export const getCategorySlug = (category: ProjectCategory): string => (
+  getStringValue(category, ['slug', 'cat', 'id']) || getCategoryLabel(category)
+);
 
-export const fetchImpactMetrics = async (projects: PortfolioProject[] = []): Promise<PortfolioImpactMetric[]> => {
-  const normalizeMetric = (item: any): PortfolioImpactMetric | null => {
-    const label = getStringValue(item, ['label', 'title', 'name']);
-    const rawDisplayValue = getStringValue(item, ['value', 'num', 'number', 'count']);
-    const parsedDisplayValue = splitMetricDisplayValue(rawDisplayValue);
-    const value = getNumberValue(item, ['target', 'numeric_value', 'numericValue']) ?? parsedDisplayValue.value;
-    const suffix = getStringValue(item, ['suffix']) || parsedDisplayValue.suffix;
-    if (!label || !rawDisplayValue) return null;
-    return {
-      value,
-      displayValue: `${value}${suffix}` || rawDisplayValue,
-      suffix,
-      label,
-      sub: getStringValue(item, ['short_desc', 'shortDesc', 'sub', 'subtitle', 'description', 'text']),
-    };
-  };
+export const fetchPortfolioContent = async (init?: RequestInit): Promise<PortfolioApiData> => fetchPortfolioApiData(init);
 
-  for (const { table, order } of [
-    { table: 'impact_numbers', order: 'display_order' },
-    { table: 'homepage_stats', order: 'sequence' },
-    { table: 'impact_metrics', order: 'sequence' },
-  ]) {
-    try {
-      const { data, error } = await supabase.from(table).select('*').order(order, { ascending: true });
-
-      if (!error && data?.length) {
-        const metrics = data
-          .filter((item: any) => item?.is_active !== false && item?.active !== false && !item?.deleted_at)
-          .map(normalizeMetric)
-          .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
-        if (metrics.length) return metrics;
-      }
-    } catch {
-      // Try the next known stats table name, then fall back below.
-    }
-  }
-
-  if (!projects.length) return fallbackImpactMetrics;
-
-  const currentYear = new Date().getFullYear();
-  const years = projects.map(project => Number(project.year)).filter(year => Number.isFinite(year) && year > 1900);
-  const earliestYear = years.length ? Math.min(...years) : 2018;
-  const clients = new Set(projects.map(project => project.client).filter(Boolean));
-  const industries = new Set(projects.map(project => project.industry || project.category).filter(Boolean));
-
-  return [
-    { value: Math.max(1, currentYear - earliestYear + 1), displayValue: `${Math.max(1, currentYear - earliestYear + 1)}+`, suffix: '+', label: 'Years of Experience', sub: `Delivering results since ${earliestYear}` },
-    { value: clients.size || projects.length, displayValue: `${clients.size || projects.length}+`, suffix: '+', label: 'Clients Served', sub: `Across ${industries.size || 1}+ industries globally` },
-    { value: projects.length, displayValue: `${projects.length}+`, suffix: '+', label: 'Projects Delivered', sub: 'On time, on budget, on point' },
-    { value: industries.size || 1, displayValue: `${industries.size || 1}+`, suffix: '+', label: 'Industries Covered', sub: 'Focused expertise across growth sectors' },
-  ];
-};
-
-const getSiteSettingValue = async (key: string): Promise<any | null> => {
-  const { data, error } = await supabase
-    .from('site_settings')
-    .select('value')
-    .eq('key', key)
-    .single();
-
-  if (error) return null;
-  return data?.value || null;
-};
-
-export const fetchHomeHeroContent = async (): Promise<HomeHeroContent | null> => {
-  const value = await getSiteSettingValue('hero_section');
-  if (!value) return null;
+const normalizeHeroContent = (value: any): HomeHeroContent | null => {
+  if (!value || typeof value !== 'object') return null;
 
   const buttons = Array.isArray(value.buttons) ? value.buttons : [];
   const primaryButton = buttons[0] || {};
   const secondaryButton = buttons[1] || {};
 
   return {
-    eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']) || fallbackHomeHeroContent.eyebrow,
-    title: getStringValue(value, ['heading', 'title', 'headline']) || fallbackHomeHeroContent.title,
-    highlight: getStringValue(value, ['heading_highlight', 'highlight', 'title_highlight']) || fallbackHomeHeroContent.highlight,
-    subtitle: getStringValue(value, ['sub_heading', 'subtitle', 'subTitle', 'description', 'text']) || fallbackHomeHeroContent.subtitle,
-    primaryLabel: getStringValue(primaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.primaryLabel,
-    primaryHref: getStringValue(primaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.primaryHref,
-    primaryIcon: getStringValue(primaryButton, ['icon']) || fallbackHomeHeroContent.primaryIcon,
-    secondaryLabel: getStringValue(secondaryButton, ['text', 'label', 'title']) || fallbackHomeHeroContent.secondaryLabel,
-    secondaryHref: getStringValue(secondaryButton, ['link', 'href', 'url']) || fallbackHomeHeroContent.secondaryHref,
-    secondaryIcon: getStringValue(secondaryButton, ['icon']) || fallbackHomeHeroContent.secondaryIcon,
+    eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']),
+    title: getStringValue(value, ['heading', 'title', 'headline']),
+    highlight: getStringValue(value, ['heading_highlight', 'highlight', 'title_highlight']),
+    subtitle: getStringValue(value, ['sub_heading', 'subtitle', 'subTitle', 'description', 'text']),
+    primaryLabel: getStringValue(primaryButton, ['text', 'label', 'title']),
+    primaryHref: getStringValue(primaryButton, ['link', 'href', 'url']),
+    primaryIcon: getStringValue(primaryButton, ['icon']),
+    primaryNewTab: primaryButton?.new_tab === true,
+    secondaryLabel: getStringValue(secondaryButton, ['text', 'label', 'title']),
+    secondaryHref: getStringValue(secondaryButton, ['link', 'href', 'url']),
+    secondaryIcon: getStringValue(secondaryButton, ['icon']),
+    secondaryNewTab: secondaryButton?.new_tab === true,
   };
 };
 
-export const fetchContactSectionContent = async (): Promise<ContactSectionContent | null> => {
-  const value = await getSiteSettingValue('contact_section');
-  if (!value) return null;
+const normalizeContactContent = (value: any): ContactSectionContent | null => {
+  if (!value || typeof value !== 'object') return null;
   const button = value.button || {};
 
   return {
-    heading: getStringValue(value, ['heading', 'title']) || fallbackContactSectionContent.heading,
-    highlight: getStringValue(value, ['heading_highlight', 'highlight']) || fallbackContactSectionContent.highlight,
-    buttonLabel: getStringValue(button, ['text', 'label', 'title']) || fallbackContactSectionContent.buttonLabel,
-    buttonHref: getStringValue(button, ['link', 'href', 'url']) || fallbackContactSectionContent.buttonHref,
+    heading: getStringValue(value, ['heading', 'title']),
+    highlight: getStringValue(value, ['heading_highlight', 'highlight']),
+    buttonLabel: getStringValue(button, ['text', 'label', 'title']),
+    buttonHref: getStringValue(button, ['link', 'href', 'url']),
   };
 };
 
-export const fetchClientLogos = async (): Promise<ClientLogo[]> => {
-  const { data, error } = await supabase
-    .from('client_logos')
-    .select('id, client_name, logo_image, display_order, is_active, deleted_at')
-    .order('display_order', { ascending: true });
-
-  if (error || !data?.length) return fallbackClientLogos;
-
-  const logos = data
-    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
-    .map((item: any) => ({
-      id: getStringValue(item, ['id']) || getStringValue(item, ['client_name']),
-      name: getStringValue(item, ['client_name']) || 'Client logo',
-      image: resolveAssetUrl(getStringValue(item, ['logo_image'])),
-    }))
-    .filter(logo => logo.id && (logo.name || logo.image));
-
-  return logos.length ? logos : fallbackClientLogos;
+const normalizeImpactMetric = (item: any): PortfolioImpactMetric | null => {
+  const label = getStringValue(item, ['title', 'label', 'name']);
+  const rawDisplayValue = getStringValue(item, ['number', 'value', 'num', 'count']);
+  const parsedDisplayValue = splitMetricDisplayValue(rawDisplayValue);
+  const value = getNumberValue(item, ['target', 'numeric_value', 'numericValue', 'number']) ?? parsedDisplayValue.value;
+  const suffix = getStringValue(item, ['suffix']) || parsedDisplayValue.suffix;
+  if (!label || !rawDisplayValue) return null;
+  return {
+    value,
+    displayValue: `${value}${suffix}`,
+    suffix,
+    label,
+    sub: getStringValue(item, ['short_desc', 'shortDesc', 'sub', 'subtitle', 'description', 'text']),
+  };
 };
 
-export const fetchSocialLinks = async (): Promise<SocialLink[]> => {
-  const { data, error } = await supabase
-    .from('social_links')
-    .select('id, platform, profile_url, icon, display_order, is_active, deleted_at')
-    .order('display_order', { ascending: true });
+export const normalizePortfolioProjectsFromApi = (data: PortfolioApiData): PortfolioProject[] => {
+  const categoryNames = new Map<string, string>();
+  data.categories.forEach((category) => {
+    const label = getCategoryLabel(category);
+    [getCategorySlug(category), getStringValue(category, ['id'])].filter(Boolean).forEach((key) => {
+      if (label) categoryNames.set(key, label);
+    });
+  });
 
-  if (error || !data?.length) return fallbackSocialLinks;
-
-  const links = data
-    .filter((item: any) => item?.is_active !== false && !item?.deleted_at)
-    .map((item: any) => ({
-      id: getStringValue(item, ['id']) || getStringValue(item, ['platform']),
-      platform: getStringValue(item, ['platform']),
-      href: getStringValue(item, ['profile_url']),
-      icon: getStringValue(item, ['icon']),
-    }))
-    .filter(link => link.id && link.platform && link.href);
-
-  return links.length ? links : fallbackSocialLinks;
+  return data.projects
+    .filter(isPublishedProject)
+    .sort((a: any, b: any) => (Number(a?.sequence) || 0) - (Number(b?.sequence) || 0))
+    .map((item, index) => normalizePortfolioProject({
+      ...item,
+      category_name: categoryNames.get(getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory'])) || item?.category_name,
+    }, index))
+    .filter((project): project is PortfolioProject => Boolean(project));
 };
 
+export const normalizePortfolioCategoriesFromApi = (data: PortfolioApiData): string[] => sortByDisplayOrder(data.categories as any[])
+  .filter(isActiveRecord)
+  .map(getCategoryLabel)
+  .filter(Boolean);
+
+export const normalizeImpactMetricsFromApi = (data: PortfolioApiData): PortfolioImpactMetric[] => sortByDisplayOrder(data.impactNumbers as any[])
+  .filter(isActiveRecord)
+  .map(normalizeImpactMetric)
+  .filter((metric): metric is PortfolioImpactMetric => Boolean(metric));
+
+export const normalizeClientLogosFromApi = (data: PortfolioApiData): ClientLogo[] => sortByDisplayOrder(data.clientLogos as any[])
+  .filter(isActiveRecord)
+  .map((item: any) => ({
+    id: getStringValue(item, ['id']) || getStringValue(item, ['client_name', 'name']),
+    name: getStringValue(item, ['client_name', 'name']) || 'Client logo',
+    image: resolveAssetUrl(getStringValue(item, ['logo_image', 'image', 'imageUrl'])),
+  }))
+  .filter(logo => logo.id && (logo.name || logo.image));
+
+export const normalizeSocialLinksFromApi = (data: PortfolioApiData): SocialLink[] => sortByDisplayOrder(data.socialLinks as any[])
+  .filter(isActiveRecord)
+  .map((item: any) => ({
+    id: getStringValue(item, ['id']) || getStringValue(item, ['platform']),
+    platform: getStringValue(item, ['platform']),
+    href: getStringValue(item, ['profile_url', 'href', 'url']),
+    icon: getStringValue(item, ['icon']),
+  }))
+  .filter(link => link.id && link.platform && link.href);
+
+export const normalizeWebsiteContentFromApi = (data: PortfolioApiData): WebsiteContent => ({
+  projects: normalizePortfolioProjectsFromApi(data),
+  categories: normalizePortfolioCategoriesFromApi(data),
+  heroContent: normalizeHeroContent((data.siteSettings as any)?.hero_section),
+  contactContent: normalizeContactContent((data.siteSettings as any)?.contact_section),
+  impactMetrics: normalizeImpactMetricsFromApi(data),
+  clientLogos: normalizeClientLogosFromApi(data),
+  socialLinks: normalizeSocialLinksFromApi(data),
+});
+
+const fallbackWebsiteContent: WebsiteContent = {
+  projects: fallbackPortfolioProjects,
+  categories: ['Branding', 'Websites', 'Events', 'Publication', 'Interiors', 'Packaging'],
+  heroContent: fallbackHomeHeroContent,
+  contactContent: fallbackContactSectionContent,
+  impactMetrics: fallbackImpactMetrics,
+  clientLogos: fallbackClientLogos,
+  socialLinks: fallbackSocialLinks,
+};
+
+export const loadWebsiteContent = async (init?: RequestInit): Promise<WebsiteContentLoadResult> => {
+  try {
+    return {
+      ok: true,
+      content: normalizeWebsiteContentFromApi(await fetchPortfolioContent(init)),
+      usedFallback: false,
+    };
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    console.error('Unable to load live website content.', normalizedError);
+    return {
+      ok: false,
+      content: fallbackWebsiteContent,
+      usedFallback: true,
+      error: normalizedError,
+    };
+  }
+};
