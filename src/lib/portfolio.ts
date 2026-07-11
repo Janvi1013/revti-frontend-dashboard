@@ -381,9 +381,9 @@ export const fetchPortfolioContent = async (init?: RequestInit): Promise<Portfol
 const normalizeHeroContent = (value: any): HomeHeroContent | null => {
   if (!value || typeof value !== 'object') return null;
 
-  const buttons = Array.isArray(value.buttons) ? value.buttons : [];
-  const primaryButton = buttons[0] || {};
-  const secondaryButton = buttons[1] || {};
+    const buttons = Array.isArray(value.buttons) ? value.buttons : [];
+    const primaryButton = buttons[0] || {};
+    const secondaryButton = buttons[1] || {};
 
   return {
     eyebrow: getStringValue(value, ['tagline', 'eyebrow', 'kicker', 'badge']),
