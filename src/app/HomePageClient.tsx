@@ -417,15 +417,15 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   </div>
 </section>
 
-{/* ── NUMBERS ── */}
-<section className="numbers" aria-label="Key metrics">
+{/* ── IMPACT ── */}
+<section className="impact" id="impact" aria-label="Key metrics">
   <div className="wrap">
-    <div className="numbers-grid">
-      {impactMetrics.map((metric) => (
-        <div className="number-card rv" key={metric.label}>
-          <div className="number-val"><span className="counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span></div>
-          <h3 className="number-label">{metric.label}</h3>
-          <p className="number-desc">{metric.sub}</p>
+    <div className="impact-grid">
+      {impactMetrics.map((metric, index) => (
+        <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={metric.label}>
+          <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
+          <div className="impact-label">{metric.label}</div>
+          <div className="impact-sub">{metric.sub}</div>
         </div>
       ))}
       {impactMetrics.length === 0 && !isContentLoading && <div className="impact-item rv"><span className="impact-label">No impact numbers available.</span></div>}
@@ -434,18 +434,16 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 </section>
 
 {/* ── PORTFOLIO GRID ── */}
-<section className="portfolio" id="portfolio" aria-labelledby="portfolio-title">
-  <div className="wrap">
-    <div className="gallery-sec-hdr rv">
-      <div>
-        <span className="eyebrow">Creative Portfolio</span>
-        <h2 id="portfolio-title">Featured Creations</h2>
-      </div>
-      <p>A collection of editorial design systems, bespoke brand identities, and high-performance digital products.</p>
+<section className="portfolio-section" id="portfolio">
+  <div className="portfolio-container">
+    <div className="portfolio-header rv">
+      <span className="portfolio-eyebrow">Creative Portfolio</span>
+      <h2 className="portfolio-title">Featured Creations</h2>
+      <p className="portfolio-subtitle">A collection of editorial design systems, bespoke brand identities, and high-performance digital products.</p>
     </div>
 
     {/* Filter Buttons */}
-    <div className="filter-row rv">
+    <div className="filter-menu rv">
       {portfolioCategories.map((category) => (
         <button
           className={`filter-btn ${category === 'all' ? 'active' : ''}`}
@@ -467,10 +465,10 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
           key={project.id}
           aria-label={`View project details for ${project.title}`}
         >
-          <div className="card-aspect">
-            <div className="card-aspect-inner">
+          <div className="card-visual">
+            <div className="card-image-wrapper">
               {project.image ? (
-                <img src={project.image} alt={project.imageAlt} className="card-img" loading="lazy" />
+                <img src={project.image} alt={project.imageAlt} loading="lazy" />
               ) : (
                 <div className="card-placeholder" style={{ background: project.placeholderGradient }}>
                   <span className="placeholder-icon">{project.icon || '✨'}</span>
