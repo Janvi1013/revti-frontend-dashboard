@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { projectCustomCss } from '../../styles/projectCustomCss';
 import { submitEnquiry } from '@/lib/actions';
 import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
@@ -486,11 +485,11 @@ export default function ProjectPageClient({
   }, [project, projects]);
 
   if (isProjectLoading) {
-    return <><style dangerouslySetInnerHTML={{ __html: projectCustomCss }} /><div className="modal-card" role="status" aria-live="polite">Loading live project content.</div></>;
+    return <><div className="modal-card" role="status" aria-live="polite">Loading live project content.</div></>;
   }
 
   if (!project || projectNotFound) {
-    return <><style dangerouslySetInnerHTML={{ __html: projectCustomCss }} /><div className="modal-card" role="status" aria-live="polite">{projectError || 'Project not found.'}<br /><a href="/" className="btn-primary">Back to Home</a></div></>;
+    return <><div className="modal-card" role="status" aria-live="polite">{projectError || 'Project not found.'}<br /><a href="/" className="btn-primary">Back to Home</a></div></>;
   }
 
   const galleryImages = project.gallery.length ? project.gallery : [project.image].filter((image): image is string => Boolean(image));
@@ -505,7 +504,6 @@ export default function ProjectPageClient({
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: projectCustomCss }} />
       <div className="sr-only" role="status" aria-live="polite">{projectError || 'Project content loaded.'}</div>
       
       <div id="cur-dot"></div>

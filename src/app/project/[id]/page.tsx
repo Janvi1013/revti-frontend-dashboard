@@ -1,4 +1,5 @@
 import { loadWebsiteContent, fallbackPortfolioProjects } from '@/lib/portfolio';
+import { projectCustomCss } from '../../styles/projectCustomCss';
 import ProjectPageClient from './ProjectPageClient';
 
 export const dynamic = 'force-dynamic';
@@ -13,10 +14,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const project = matchedProject || fallbackPortfolioProjects.find(item => item.id === id) || null;
 
   return (
-    <ProjectPageClient
-      initialProjects={result.content.projects}
-      initialProject={project}
-      id={id}
-    />
+    <>
+      <style dangerouslySetInnerHTML={{ __html: projectCustomCss }} />
+      <ProjectPageClient
+        initialProjects={result.content.projects}
+        initialProject={project}
+        id={id}
+      />
+    </>
   );
 }

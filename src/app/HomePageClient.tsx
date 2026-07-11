@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { indexCustomCss } from './styles/indexCustomCss';
 import { submitEnquiry } from '@/lib/actions';
 import {
   loadWebsiteContent,
@@ -377,7 +376,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: indexCustomCss }} />
       <div className="sr-only" role="status" aria-live="polite">{isContentLoading ? 'Loading live site content.' : contentError || 'Live site content loaded.'}</div>
       <div id="prog"></div>
 
