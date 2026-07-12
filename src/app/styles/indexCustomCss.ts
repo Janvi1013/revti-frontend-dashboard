@@ -2367,10 +2367,19 @@ export const indexCustomCss = `
     width: max-content;
     gap: 18px;
     padding: 6px 18px;
+  }
+
+  .logo-carousel.is-marquee .logo-carousel-track {
     animation: logoMarquee 32s linear infinite;
   }
 
-  .logo-carousel:hover .logo-carousel-track {
+  .logo-carousel.is-static .logo-carousel-track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .logo-carousel.is-marquee:hover .logo-carousel-track {
     animation-play-state: paused;
   }
 

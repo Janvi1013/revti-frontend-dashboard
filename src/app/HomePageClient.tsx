@@ -502,7 +502,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     <span className="logo-carousel-eyebrow">Trusted Collaborations</span>
     <h2 className="logo-carousel-title" id="logo-carousel-title">Brands that trust our creative process</h2>
   </div>
-  <div className="logo-carousel" aria-label="Client logo carousel">
+  <div className={`logo-carousel${clientLogos.length > 1 ? ' is-marquee' : ' is-static'}`} aria-label="Client logo carousel">
     <div className="logo-carousel-track">
       {clientLogos.length === 0 && !isContentLoading && <div className="client-logo-card"><span>No client logos available.</span></div>}
       {clientLogos.map((logo) => (
@@ -510,11 +510,13 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
           {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
         </div>
       ))}
-      {clientLogos.map((logo) => (
-        <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
-          {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
-        </div>
-      ))}
+      {clientLogos.length > 1 && (
+        clientLogos.map((logo) => (
+          <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
+            {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
+          </div>
+        ))
+      )}
     </div>
   </div>
 </section>
