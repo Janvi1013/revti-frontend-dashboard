@@ -516,7 +516,9 @@ export const loadWebsiteContent = async (init?: RequestInit): Promise<WebsiteCon
     };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
-    console.error('Unable to load live website content.', normalizedError);
+    if (!init?.signal?.aborted && process.env.NODE_ENV !== 'production') {
+      console.error('Unable to load live website content.', normalizedError);
+    }
     return {
       ok: false,
       content: fallbackWebsiteContent,
