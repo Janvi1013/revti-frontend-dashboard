@@ -1364,6 +1364,26 @@ export const projectCustomCss = `
     overflow-y: auto;
   }
 
+  .mob-nav {
+    width: min(86vw, 320px);
+    z-index: 10000;
+  }
+
+  .ham {
+    position: relative;
+    z-index: 10001;
+  }
+
+  .tl-body,
+  .tl-title,
+  .tl-text,
+  .tl-step {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   @media (hover: none), (pointer: coarse) {
     html,
     body,
@@ -1398,6 +1418,15 @@ export const projectCustomCss = `
   }
 
   @media (max-width: 768px) {
+    .nav-links,
+    .nav-back {
+      display: none !important;
+    }
+
+    .ham {
+      display: flex !important;
+    }
+
     .wrap,
     .nav-in,
     .proj-hero-content,
@@ -1417,6 +1446,22 @@ export const projectCustomCss = `
     .tl-item {
       grid-template-columns: 44px minmax(0, 1fr);
       gap: 16px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .timeline::before {
+      left: 21px;
+    }
+
+    .tl-dot {
+      width: 44px;
+      height: 44px;
+      font-size: 16px;
+    }
+
+    .tl-body {
+      padding: 18px;
     }
 
     .impact-metric-card {
@@ -1440,6 +1485,10 @@ export const projectCustomCss = `
     .tl-item {
       grid-template-columns: 1fr;
       text-align: center;
+    }
+
+    .timeline::before {
+      display: none;
     }
 
     .tl-dot {

@@ -24,6 +24,7 @@ export default function ProjectPageClient({
   const [projectNotFound, setProjectNotFound] = useState(initialProject === null);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -241,28 +242,6 @@ export default function ProjectPageClient({
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // 5. Hamburger
-    const hamB = document.getElementById('ham');
-    const mob = document.getElementById('mob');
-    const handleHamClick = () => {
-      if (hamB && mob) {
-        hamB.classList.toggle('open');
-        mob.classList.toggle('open');
-        document.body.style.overflow = mob.classList.contains('open') ? 'hidden' : '';
-      }
-    };
-    if (hamB) hamB.addEventListener('click', handleHamClick);
-
-    const mobLinks = mob ? mob.querySelectorAll('a') : [];
-    const handleMobLinkClick = () => {
-      if (hamB && mob) {
-        hamB.classList.remove('open');
-        mob.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    };
-    mobLinks.forEach(a => a.addEventListener('click', handleMobLinkClick));
-
     // 8. Lightbox Setup
     const galMeta = (currentProject.gallery.length ? currentProject.gallery : [currentProject.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
     let lbIdx = 0;
@@ -446,6 +425,14 @@ export default function ProjectPageClient({
   }, [id, router, projects, project]);
 
   useEffect(() => {
+    document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
     if (!project) return;
     // 1. Reveal Observer
     const ro = new IntersectionObserver(e => e.forEach(en => {
@@ -529,14 +516,24 @@ export default function ProjectPageClient({
             <li><a href="/#contact">Contact</a></li>
           </ul>
           <a href="/" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
-          <button className="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
+          <button
+            className={`ham${isMobileNavOpen ? ' open' : ''}`}
+            id="ham"
+            aria-label="Menu"
+            aria-controls="mob"
+            aria-expanded={isMobileNavOpen}
+            type="button"
+            onClick={() => setIsMobileNavOpen(open => !open)}
+          >
+            <span></span><span></span><span></span>
+          </button>
         </div>
       </nav>
 
-      <div className="mob-nav" id="mob">
-        <a href="/">Home</a>
-        <a href="/#portfolio">Projects</a>
-        <a href="/#contact">Contact</a>
+      <div className={`mob-nav${isMobileNavOpen ? ' open' : ''}`} id="mob">
+        <a href="/" onClick={() => setIsMobileNavOpen(false)}>Home</a>
+        <a href="/#portfolio" onClick={() => setIsMobileNavOpen(false)}>Projects</a>
+        <a href="/#contact" onClick={() => setIsMobileNavOpen(false)}>Contact</a>
       </div>
 
       <header className="proj-hero">
