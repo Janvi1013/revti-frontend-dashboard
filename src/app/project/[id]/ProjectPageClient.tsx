@@ -24,6 +24,7 @@ export default function ProjectPageClient({
   const [projectNotFound, setProjectNotFound] = useState(initialProject === null);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -241,28 +242,6 @@ export default function ProjectPageClient({
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // 5. Hamburger
-    const hamB = document.getElementById('ham');
-    const mob = document.getElementById('mob');
-    const handleHamClick = () => {
-      if (hamB && mob) {
-        hamB.classList.toggle('open');
-        mob.classList.toggle('open');
-        document.body.style.overflow = mob.classList.contains('open') ? 'hidden' : '';
-      }
-    };
-    if (hamB) hamB.addEventListener('click', handleHamClick);
-
-    const mobLinks = mob ? mob.querySelectorAll('a') : [];
-    const handleMobLinkClick = () => {
-      if (hamB && mob) {
-        hamB.classList.remove('open');
-        mob.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    };
-    mobLinks.forEach(a => a.addEventListener('click', handleMobLinkClick));
-
     // 8. Lightbox Setup
     const galMeta = (currentProject.gallery.length ? currentProject.gallery : [currentProject.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
     let lbIdx = 0;
@@ -446,6 +425,24 @@ export default function ProjectPageClient({
   }, [id, router, projects, project]);
 
   useEffect(() => {
+    document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
+
+    const closeMobileNavOnDesktop = () => {
+      if (window.innerWidth > 768) {
+        setIsMobileNavOpen(false);
+      }
+    };
+
+    closeMobileNavOnDesktop();
+    window.addEventListener('resize', closeMobileNavOnDesktop);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('resize', closeMobileNavOnDesktop);
+    };
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
     if (!project) return;
     // 1. Reveal Observer
     const ro = new IntersectionObserver(e => e.forEach(en => {
@@ -529,14 +526,32 @@ export default function ProjectPageClient({
             <li><a href="/#contact">Contact</a></li>
           </ul>
           <a href="/" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
-          <button className="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
+          <button
+            className={`ham${isMobileNavOpen ? ' open' : ''}`}
+            id="ham"
+            aria-label="Menu"
+            aria-controls="mob"
+            aria-expanded={isMobileNavOpen}
+            type="button"
+            onClick={() => setIsMobileNavOpen(open => !open)}
+          >
+            <span></span><span></span><span></span>
+          </button>
         </div>
       </nav>
 
-      <div className="mob-nav" id="mob">
-        <a href="/">Home</a>
-        <a href="/#portfolio">Projects</a>
-        <a href="/#contact">Contact</a>
+      <div className={`mob-nav${isMobileNavOpen ? ' open' : ''}`} id="mob">
+        <button
+          className="mob-close"
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setIsMobileNavOpen(false)}
+        >
+          ×
+        </button>
+        <a href="/" onClick={() => setIsMobileNavOpen(false)}>Home</a>
+        <a href="/#portfolio" onClick={() => setIsMobileNavOpen(false)}>Projects</a>
+        <a href="/#contact" onClick={() => setIsMobileNavOpen(false)}>Contact</a>
       </div>
 
       <header className="proj-hero">
@@ -613,7 +628,11 @@ export default function ProjectPageClient({
             {processSteps.map((step, index) => (
               <div className="tl-item rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
                 <div className="tl-dot">{step.icon || '•'}</div>
-                <div className="tl-body"><div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div><h3 className="tl-title">{step.title}</h3><p className="tl-text">{step.text}</p></div>
+                <div className="tl-body">
+                  <div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div>
+                  {step.title && <h3 className="tl-title">{step.title}</h3>}
+                  {step.text && <p className="tl-text">{step.text}</p>}
+                </div>
               </div>
             ))}
           </div>
@@ -652,7 +671,7 @@ export default function ProjectPageClient({
           <div className="impact-card-grid" aria-label="Impact result metrics">
             {project.stats.map((stat, index) => (
               <div className="impact-metric-card rv" style={{ transitionDelay: `${0.1 + index * 0.06}s` }} key={`${stat.label}-${index}`}>
-                <span className="impact-metric-label">{stat.label}</span>
+                {stat.label && <span className="impact-metric-label">{stat.label}</span>}
                 <div className="impact-metric-row">
                   {stat.before && <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">{stat.before}</span></span>}
                   {stat.before && <span className="impact-arrow" aria-hidden="true">→</span>}
@@ -685,9 +704,15 @@ export default function ProjectPageClient({
               <a href={`/project/${item.id}`} className="project-card" key={item.id}>
                 <div className="card-visual"><div className="card-image-wrapper">
                   {item.image ? <img src={item.image} alt={item.imageAlt || item.title} loading="lazy" /> : <div className="card-placeholder" style={{ background: item.placeholderGradient }}><span className="placeholder-icon">{item.icon || '✨'}</span></div>}
-                  <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>
+                  {item.category && <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>}
                 </div></div>
-                <div className="card-info"><h3 className="card-title">{item.title}</h3><div className="meta-container"><div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div><div className="show-project-view">Show Project</div></div></div>
+                <div className="card-info">
+                  <h3 className="card-title">{item.title}</h3>
+                  <div className="meta-container">
+                    {item.tags.length > 0 && <div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div>}
+                    <div className="show-project-view">Show Project</div>
+                  </div>
+                </div>
               </a>
             ))}
           </div>
