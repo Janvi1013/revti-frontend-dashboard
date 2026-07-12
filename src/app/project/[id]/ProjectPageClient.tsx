@@ -541,6 +541,14 @@ export default function ProjectPageClient({
       </nav>
 
       <div className={`mob-nav${isMobileNavOpen ? ' open' : ''}`} id="mob">
+        <button
+          className="mob-close"
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setIsMobileNavOpen(false)}
+        >
+          ×
+        </button>
         <a href="/" onClick={() => setIsMobileNavOpen(false)}>Home</a>
         <a href="/#portfolio" onClick={() => setIsMobileNavOpen(false)}>Projects</a>
         <a href="/#contact" onClick={() => setIsMobileNavOpen(false)}>Contact</a>

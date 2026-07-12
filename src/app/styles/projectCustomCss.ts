@@ -1381,6 +1381,28 @@ export const projectCustomCss = `
     z-index: 10001;
   }
 
+  .mob-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 999px;
+    background: rgba(255,255,255,.04);
+    color: var(--txt);
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer !important;
+  }
+
+  .mob-close:hover {
+    background: rgba(255,255,255,.10);
+  }
+
   .tl-body,
   .tl-title,
   .tl-text,
@@ -1419,6 +1441,12 @@ export const projectCustomCss = `
       padding-block: clamp(58px, 10vw, 90px) !important;
     }
 
+    .project-switcher {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 1280px) {
     .project-switcher {
       display: none !important;
     }
