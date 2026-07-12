@@ -2367,10 +2367,19 @@ export const indexCustomCss = `
     width: max-content;
     gap: 18px;
     padding: 6px 18px;
+  }
+
+  .logo-carousel.is-marquee .logo-carousel-track {
     animation: logoMarquee 32s linear infinite;
   }
 
-  .logo-carousel:hover .logo-carousel-track {
+  .logo-carousel.is-static .logo-carousel-track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .logo-carousel.is-marquee:hover .logo-carousel-track {
     animation-play-state: paused;
   }
 
@@ -2437,6 +2446,233 @@ export const indexCustomCss = `
       min-width: 170px;
       height: 88px;
       border-radius: 18px;
+    }
+  }
+
+  /* Dynamic content fitting: centered rows without reserved blank columns. */
+  .impact-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 280px)) !important;
+    justify-content: center;
+    justify-items: stretch;
+  }
+
+  .impact-item {
+    width: 100%;
+  }
+
+  .project-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 360px)) !important;
+    justify-content: center;
+    justify-items: stretch;
+  }
+
+  .project-empty-state {
+    grid-column: 1 / -1;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .meta-container {
+    align-items: center;
+    gap: 14px;
+  }
+
+  .meta-container:has(.card-tags) {
+    align-items: flex-start;
+  }
+
+  .show-project-view:only-child {
+    margin-top: 0;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .logo-carousel.is-static .logo-carousel-track {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cta-socials {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Final responsive safety layer for every viewport size. */
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  .wrap,
+  .nav-in,
+  .portfolio-container {
+    width: min(100%, 1400px);
+    padding-inline: clamp(18px, 4vw, 60px) !important;
+  }
+
+  section {
+    max-width: 100vw;
+  }
+
+  .hero-content,
+  .portfolio-header,
+  .logo-carousel-header,
+  .contact-cta-box {
+    width: min(100%, 980px);
+    margin-inline: auto;
+  }
+
+  .hero-h1,
+  .portfolio-title,
+  .logo-carousel-title,
+  .cta-title {
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .hero-actions,
+  .cta-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .filter-menu {
+    max-width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .filter-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-card,
+  .impact-item,
+  .client-logo-card {
+    min-width: 0;
+  }
+
+  .card-info,
+  .meta-container,
+  .card-tags {
+    min-width: 0;
+  }
+
+  .card-title,
+  .tag,
+  .client-logo-card span,
+  .cta-socials a {
+    overflow-wrap: anywhere;
+  }
+
+  .modal-card {
+    width: min(94vw, 720px) !important;
+    max-height: min(88vh, 760px);
+    overflow-y: auto;
+  }
+
+  @media (min-width: 1180px) {
+    .filter-menu {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .nav-in {
+      height: 68px;
+      gap: 16px;
+    }
+
+    .hero {
+      min-height: auto;
+      padding-block: clamp(96px, 18vw, 140px) clamp(56px, 10vw, 90px);
+    }
+
+    .portfolio-section,
+    .logo-carousel-section,
+    .contact-cta,
+    .impact {
+      padding-block: clamp(56px, 10vw, 86px) !important;
+    }
+
+    .project-grid,
+    .impact-grid {
+      grid-template-columns: minmax(0, min(100%, 520px)) !important;
+    }
+
+    .project-card {
+      width: 100%;
+    }
+
+    .filter-menu {
+      padding-bottom: 8px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .wrap,
+    .nav-in,
+    .portfolio-container {
+      padding-inline: clamp(14px, 5vw, 22px) !important;
+    }
+
+    .hero-h1,
+    .portfolio-title,
+    .logo-carousel-title,
+    .cta-title {
+      font-size: clamp(36px, 12vw, 58px) !important;
+      line-height: 1.02 !important;
+      letter-spacing: -0.055em !important;
+    }
+
+    .hero-actions,
+    .cta-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .hero-actions a,
+    .cta-row a {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .contact-cta-box {
+      padding: clamp(28px, 8vw, 42px) clamp(18px, 6vw, 28px);
+      border-radius: 24px;
+    }
+
+    .client-logo-card {
+      width: min(100%, 260px);
+      min-width: min(100%, 170px);
+    }
+  }
+
+  @media (max-width: 380px) {
+    .wrap,
+    .nav-in,
+    .portfolio-container {
+      padding-inline: 12px !important;
+    }
+
+    .project-grid,
+    .impact-grid {
+      gap: 16px;
+    }
+
+    .card-info {
+      padding: 16px;
     }
   }
 `;
