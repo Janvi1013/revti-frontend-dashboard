@@ -613,7 +613,11 @@ export default function ProjectPageClient({
             {processSteps.map((step, index) => (
               <div className="tl-item rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
                 <div className="tl-dot">{step.icon || '•'}</div>
-                <div className="tl-body"><div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div><h3 className="tl-title">{step.title}</h3><p className="tl-text">{step.text}</p></div>
+                <div className="tl-body">
+                  <div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div>
+                  {step.title && <h3 className="tl-title">{step.title}</h3>}
+                  {step.text && <p className="tl-text">{step.text}</p>}
+                </div>
               </div>
             ))}
           </div>
@@ -652,7 +656,7 @@ export default function ProjectPageClient({
           <div className="impact-card-grid" aria-label="Impact result metrics">
             {project.stats.map((stat, index) => (
               <div className="impact-metric-card rv" style={{ transitionDelay: `${0.1 + index * 0.06}s` }} key={`${stat.label}-${index}`}>
-                <span className="impact-metric-label">{stat.label}</span>
+                {stat.label && <span className="impact-metric-label">{stat.label}</span>}
                 <div className="impact-metric-row">
                   {stat.before && <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">{stat.before}</span></span>}
                   {stat.before && <span className="impact-arrow" aria-hidden="true">→</span>}
@@ -685,9 +689,15 @@ export default function ProjectPageClient({
               <a href={`/project/${item.id}`} className="project-card" key={item.id}>
                 <div className="card-visual"><div className="card-image-wrapper">
                   {item.image ? <img src={item.image} alt={item.imageAlt || item.title} loading="lazy" /> : <div className="card-placeholder" style={{ background: item.placeholderGradient }}><span className="placeholder-icon">{item.icon || '✨'}</span></div>}
-                  <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>
+                  {item.category && <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>}
                 </div></div>
-                <div className="card-info"><h3 className="card-title">{item.title}</h3><div className="meta-container"><div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div><div className="show-project-view">Show Project</div></div></div>
+                <div className="card-info">
+                  <h3 className="card-title">{item.title}</h3>
+                  <div className="meta-container">
+                    {item.tags.length > 0 && <div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div>}
+                    <div className="show-project-view">Show Project</div>
+                  </div>
+                </div>
               </a>
             ))}
           </div>

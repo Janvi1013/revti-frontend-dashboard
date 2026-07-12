@@ -424,8 +424,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       {impactMetrics.map((metric, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={metric.label}>
           <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
-          <div className="impact-label">{metric.label}</div>
-          <div className="impact-sub">{metric.sub}</div>
+          {metric.label && <div className="impact-label">{metric.label}</div>}
+          {metric.sub && <div className="impact-sub">{metric.sub}</div>}
         </div>
       ))}
       {impactMetrics.length === 0 && !isContentLoading && <div className="impact-item rv"><span className="impact-label">No impact numbers available.</span></div>}
@@ -474,19 +474,23 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
                   <span className="placeholder-icon">{project.icon || '✨'}</span>
                 </div>
               )}
-              <div className="card-overlay">
-                <div className="overlay-content">
-                  <span className="overlay-category">{project.category}</span>
+              {project.category && (
+                <div className="card-overlay">
+                  <div className="overlay-content">
+                    <span className="overlay-category">{project.category}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="card-info">
             <h3 className="card-title">{project.title}</h3>
             <div className="meta-container">
-              <div className="card-tags">
-                {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
-              </div>
+              {project.tags.length > 0 && (
+                <div className="card-tags">
+                  {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
+                </div>
+              )}
               <div className="show-project-view">Show Project</div>
             </div>
           </div>
