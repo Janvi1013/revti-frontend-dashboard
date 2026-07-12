@@ -1403,6 +1403,10 @@ export const projectCustomCss = `
     background: rgba(255,255,255,.10);
   }
 
+  .project-switcher {
+    display: none !important;
+  }
+
   .tl-body,
   .tl-title,
   .tl-text,
