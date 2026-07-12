@@ -427,8 +427,18 @@ export default function ProjectPageClient({
   useEffect(() => {
     document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
 
+    const closeMobileNavOnDesktop = () => {
+      if (window.innerWidth > 768) {
+        setIsMobileNavOpen(false);
+      }
+    };
+
+    closeMobileNavOnDesktop();
+    window.addEventListener('resize', closeMobileNavOnDesktop);
+
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('resize', closeMobileNavOnDesktop);
     };
   }, [isMobileNavOpen]);
 

@@ -2582,6 +2582,17 @@ export const indexCustomCss = `
     overflow-y: auto;
   }
 
+  .mob-nav {
+    width: min(86vw, 320px);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mob-nav.open {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
   @media (min-width: 1180px) {
     .filter-menu {
       justify-content: center;
@@ -2673,6 +2684,15 @@ export const indexCustomCss = `
 
     .card-info {
       padding: 16px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .mob-nav,
+    .mob-nav.open {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
   }
 `;

@@ -1367,6 +1367,13 @@ export const projectCustomCss = `
   .mob-nav {
     width: min(86vw, 320px);
     z-index: 10000;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mob-nav.open {
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .ham {
@@ -1483,21 +1490,40 @@ export const projectCustomCss = `
     }
 
     .tl-item {
-      grid-template-columns: 1fr;
-      text-align: center;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 14px;
+      text-align: left;
     }
 
     .timeline::before {
-      display: none;
+      display: block;
+      left: 18px;
     }
 
     .tl-dot {
-      margin-inline: auto;
+      width: 38px;
+      height: 38px;
+      margin-inline: 0;
+      font-size: 14px;
+    }
+
+    .tl-body {
+      padding: 16px;
+      border-radius: 14px;
     }
 
     .sim-grid,
     .impact-card-grid {
       gap: 16px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .mob-nav,
+    .mob-nav.open {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
   }
 `;
