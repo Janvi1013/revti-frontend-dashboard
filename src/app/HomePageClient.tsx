@@ -83,7 +83,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(initialContent.clientLogos);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialContent.socialLinks);
   const [activeProjectFilter, setActiveProjectFilter] = useState(getInitialProjectFilter);
-  const filterMenuRef = useRef<HTMLElement | null>(null);
+  const filterButtonRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const [portfolioCategories, setPortfolioCategories] = useState<string[]>(initialContent.categories.length ? initialContent.categories : Array.from(new Set(initialContent.projects.map(p => p.category).filter(Boolean))));
   const [contentError, setContentError] = useState<string | null>(null);
@@ -127,6 +127,21 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     window.history.replaceState(null, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
   }, [resolvedProjectFilter]);
 
+  const scrollActiveFilterIntoView = useCallback((filterSlug: string) => {
+    window.requestAnimationFrame(() => {
+      const activeButton = filterButtonRefs.current.get(filterSlug);
+      activeButton?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    });
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    scrollActiveFilterIntoView(resolvedProjectFilter);
+  }, [resolvedProjectFilter, scrollActiveFilterIntoView]);
+
   const handleProjectFilterChange = useCallback((nextFilter: string) => {
     const nextSlug = normalizeFilterSlug(nextFilter) || 'all';
     const updateFilter = () => setActiveProjectFilter(nextSlug);
@@ -139,15 +154,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       updateFilter();
     }
 
-    window.requestAnimationFrame(() => {
-      const activeButton = filterMenuRef.current?.querySelector<HTMLButtonElement>(`[data-filter="${CSS.escape(nextSlug)}"]`);
-      activeButton?.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
-    });
-  }, [prefersReducedMotion]);
+    scrollActiveFilterIntoView(nextSlug);
+  }, [prefersReducedMotion, scrollActiveFilterIntoView]);
 
   useEffect(() => {
     let active = true;
@@ -199,11 +207,14 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   }, []);
 
   useEffect(() => {
+    let createdScrollTriggers: any[] = [];
+
     // 1. GSAP ScrollTrigger register
     if (typeof window !== 'undefined' && (window as any).gsap && (window as any).ScrollTrigger) {
       const gsap = (window as any).gsap;
       const ScrollTrigger = (window as any).ScrollTrigger;
       gsap.registerPlugin(ScrollTrigger);
+      const existingScrollTriggers = new Set(ScrollTrigger.getAll ? ScrollTrigger.getAll() : []);
 
       // GSAP Scroll Reveals - Editorial Cards (.pc)
       gsap.utils.toArray('.pc').forEach((card: any) => {
@@ -225,10 +236,13 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       });
 
       // Gallery header reveal
-      gsap.fromTo('.gallery-sec-hdr', { opacity: 0, y: 40 }, {
-        opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
-        scrollTrigger: { trigger: '.gallery-sec-hdr', start: 'top 80%', once: true }
-      });
+      const galleryHeader = document.querySelector('.gallery-sec-hdr');
+      if (galleryHeader) {
+        gsap.fromTo(galleryHeader, { opacity: 0, y: 40 }, {
+          opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
+          scrollTrigger: { trigger: galleryHeader, start: 'top 80%', once: true }
+        });
+      }
 
       // Entrance animation for project cards
       const projectGrid = document.getElementById('projectGrid');
@@ -238,6 +252,10 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
           opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out',
           scrollTrigger: { trigger: projectGrid, start: 'top 80%', once: true }
         });
+      }
+
+      if (ScrollTrigger.getAll) {
+        createdScrollTriggers = ScrollTrigger.getAll().filter((trigger: any) => !existingScrollTriggers.has(trigger));
       }
     }
 
@@ -380,6 +398,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     }
 
     return () => {
+      createdScrollTriggers.forEach((trigger) => trigger.kill?.());
       window.removeEventListener('scroll', handleScroll);
     };
   }, [portfolioProjects]);
@@ -491,19 +510,28 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     </div>
 
     {/* Filter Buttons */}
-    <nav className="portfolio-filter-nav home-project-filters rv" aria-label="Filter projects" ref={filterMenuRef}>
-      {availableProjectFilters.map((filter) => (
-        <button
-          type="button"
-          className={resolvedProjectFilter === filter.slug ? 'portfolio-filter-button is-active' : 'portfolio-filter-button'}
-          data-filter={filter.slug}
-          key={filter.slug}
-          onClick={() => handleProjectFilterChange(filter.slug)}
-          aria-pressed={resolvedProjectFilter === filter.slug}
-        >
-          {filter.label}
-        </button>
-      ))}
+    <nav className="portfolio-filter-scroll home-project-filters rv" aria-label="Filter projects">
+      <div className="portfolio-filter-nav">
+        {availableProjectFilters.map((filter) => (
+          <button
+            type="button"
+            className={resolvedProjectFilter === filter.slug ? 'portfolio-filter-button is-active' : 'portfolio-filter-button'}
+            data-filter={filter.slug}
+            key={filter.slug}
+            ref={(button) => {
+              if (button) {
+                filterButtonRefs.current.set(filter.slug, button);
+              } else {
+                filterButtonRefs.current.delete(filter.slug);
+              }
+            }}
+            onClick={() => handleProjectFilterChange(filter.slug)}
+            aria-pressed={resolvedProjectFilter === filter.slug}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
     </nav>
 
     <div className="sr-only home-project-results-status" aria-live="polite">
