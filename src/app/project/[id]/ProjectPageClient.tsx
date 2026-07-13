@@ -561,7 +561,10 @@ export default function ProjectPageClient({
   const hasProcessContent = processSteps.length > 0;
   const hasImpactContent = project.stats.length > 0;
   const hasGalleryContent = galleryImages.length > 0;
-  const hasReelContent = Boolean(project.reelSection?.enabled && project.reelSection?.videoUrl?.trim());
+  const visibleReels = project.reelSection?.items
+    ?.filter((item) => item.enabled !== false)
+    .filter((item) => item.videoUrl?.trim()) ?? [];
+  const hasReelContent = project.reelSection?.enabled === true && visibleReels.length > 0;
   const hasVideoContent = Boolean(project.videoUrl?.trim());
   const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
   const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
@@ -780,7 +783,7 @@ export default function ProjectPageClient({
       )}
 
       {showReel && project.reelSection && (
-          <ProjectReelSection reel={project.reelSection} />
+          <ProjectReelSection reelSection={project.reelSection} />
       )}
 
       {showImpact && (

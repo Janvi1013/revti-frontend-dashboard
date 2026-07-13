@@ -78,17 +78,24 @@ export type PortfolioProcessStep = {
   text?: string;
 };
 
-export type ProjectReelSection = {
+export type ProjectReelItem = {
+  id: string;
   enabled: boolean;
   title?: string;
   description?: string;
   videoUrl?: string;
-  videoUploadUrl?: string;
-  videoLinkUrl?: string;
   posterUrl?: string;
   autoplay?: boolean;
   muted?: boolean;
   loop?: boolean;
+  displayOrder?: number;
+};
+
+export type ProjectReelSection = {
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  items: ProjectReelItem[];
 };
 
 export type ProjectSectionVisibility = {
@@ -297,12 +304,8 @@ const getBooleanValue = (source: any, keys: string[], fallback: boolean): boolea
   return fallback;
 };
 
-export function normalizeProjectReelSection(value: unknown): ProjectReelSection | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-
-  const reel = value as Record<string, unknown>;
-  const enabled = getBooleanValue(reel, ['enabled', 'is_enabled', 'isEnabled', 'active'], false);
-  const videoUploadUrl = resolveMediaUrl(getStringValue(reel, [
+const getProjectReelVideoUrl = (source: Record<string, unknown>) => {
+  const videoUploadUrl = resolveMediaUrl(getStringValue(source, [
     'videoUploadUrl',
     'video_upload_url',
     'uploadedVideoUrl',
@@ -315,7 +318,7 @@ export function normalizeProjectReelSection(value: unknown): ProjectReelSection 
     'upload',
     'file',
   ]));
-  const videoLinkUrl = resolveMediaUrl(getStringValue(reel, [
+  const videoLinkUrl = resolveMediaUrl(getStringValue(source, [
     'videoLinkUrl',
     'video_link_url',
     'videoLink',
@@ -327,21 +330,61 @@ export function normalizeProjectReelSection(value: unknown): ProjectReelSection 
     'externalUrl',
     'external_url',
   ]));
-  const videoUrl = videoUploadUrl || resolveMediaUrl(getStringValue(reel, ['videoUrl', 'video_url', 'video', 'url', 'src'])) || videoLinkUrl;
 
-  if (!enabled || !videoUrl) return undefined;
+  return videoUploadUrl || resolveMediaUrl(getStringValue(source, ['videoUrl', 'video_url', 'video', 'url', 'src'])) || videoLinkUrl;
+};
+
+const getReelDisplayOrder = (source: Record<string, unknown>, keys: string[], fallback: number): number => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return fallback;
+};
+
+function normalizeProjectReelItem(value: unknown, index: number, fallbackId: string): ProjectReelItem | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const item = value as Record<string, unknown>;
+  const id = getStringValue(item, ['id', '_id', 'key']) || `${fallbackId}-reel-${index}`;
+  const videoUrl = getProjectReelVideoUrl(item);
+  const posterUrl = resolveAssetUrl(getStringValue(item, ['posterUrl', 'poster_url', 'poster', 'thumbnail', 'thumbnailUrl']));
+
+  return {
+    id,
+    enabled: typeof item.enabled === 'boolean' ? item.enabled : getBooleanValue(item, ['is_enabled', 'isEnabled', 'active'], true),
+    title: getStringValue(item, ['title', 'heading']),
+    description: getStringValue(item, ['description', 'desc', 'text']),
+    videoUrl,
+    posterUrl,
+    autoplay: getBooleanValue(item, ['autoplay', 'autoPlay'], false),
+    muted: getBooleanValue(item, ['muted', 'mute'], true),
+    loop: getBooleanValue(item, ['loop'], true),
+    displayOrder: getReelDisplayOrder(item, ['displayOrder', 'display_order', 'sequence', 'order'], index),
+  };
+}
+
+export function normalizeProjectReelSection(value: unknown): ProjectReelSection | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const reel = value as Record<string, unknown>;
+  const enabled = typeof reel.enabled === 'boolean'
+    ? reel.enabled
+    : getBooleanValue(reel, ['is_enabled', 'isEnabled', 'active'], false);
+  const fallbackId = getStringValue(reel, ['id', '_id', 'key']) || 'project';
+  const rawItems = Array.isArray(reel.items) ? reel.items : [];
+  const oldShapeVideoUrl = getProjectReelVideoUrl(reel);
+  const items = (rawItems.length ? rawItems : oldShapeVideoUrl ? [reel] : [])
+    .map((item, index) => normalizeProjectReelItem(item, index, fallbackId))
+    .filter((item): item is ProjectReelItem => Boolean(item))
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
   return {
     enabled,
     title: getStringValue(reel, ['title', 'heading']),
     description: getStringValue(reel, ['description', 'desc', 'text']),
-    videoUrl,
-    videoUploadUrl,
-    videoLinkUrl,
-    posterUrl: resolveAssetUrl(getStringValue(reel, ['posterUrl', 'poster_url', 'poster', 'thumbnail', 'thumbnailUrl'])),
-    autoplay: getBooleanValue(reel, ['autoplay', 'autoPlay'], false),
-    muted: getBooleanValue(reel, ['muted', 'mute'], true),
-    loop: getBooleanValue(reel, ['loop'], true),
+    items,
   };
 };
 
@@ -440,10 +483,17 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const categoryName = getStringValue(item, ['category_name', 'categoryName']) || getStringValue(item?.category, ['name', 'title', 'label']);
   const rawSectionVisibility = item?.sectionVisibility ?? item?.section_visibility;
   const sectionVisibility = normalizeProjectSectionVisibility(rawSectionVisibility);
+  const rawReelSection = item?.reelSection ?? item?.reel_section;
+  const reelSection = normalizeProjectReelSection(rawReelSection);
 
   if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
     console.log('Raw section_visibility:', rawSectionVisibility);
     console.log('Normalized sectionVisibility:', sectionVisibility);
+  }
+
+  if (process.env.NODE_ENV !== 'production' && rawReelSection) {
+    console.log('Raw Reel:', rawReelSection);
+    console.log('Normalized Reel:', reelSection);
   }
 
   return {
@@ -488,7 +538,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     videoType: getStringValue(item, ['video_type', 'videoType']),
     videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
-    reelSection: normalizeProjectReelSection(item?.reelSection ?? item?.reel_section),
+    reelSection,
     icon: '✨',
     placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
   };
