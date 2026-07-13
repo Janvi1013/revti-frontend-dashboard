@@ -475,12 +475,12 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     </div>
 
     {/* Filter Buttons */}
-    <nav className="portfolio-filter-scroll home-project-filters rv" aria-label="Filter projects">
-      <div className="portfolio-filter-nav">
+    <nav className="home-project-filter-scroll rv" aria-label="Filter projects">
+      <div className="home-project-filter-list">
         {availableProjectFilters.map((filter) => (
           <button
             type="button"
-            className={resolvedProjectFilter === filter.slug ? 'portfolio-filter-button is-active' : 'portfolio-filter-button'}
+            className={resolvedProjectFilter === filter.slug ? 'home-project-filter-button is-active' : 'home-project-filter-button'}
             data-filter={filter.slug}
             key={filter.slug}
             ref={(button) => {

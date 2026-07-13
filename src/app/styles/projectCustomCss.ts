@@ -1527,7 +1527,7 @@ export const projectCustomCss = `
   .project-navigation-arrow {
     width: clamp(46px, 5vw, 76px);
     height: clamp(86px, 12vw, 156px);
-    display: inline-flex;
+    display: none;
     align-items: center;
     justify-content: center;
     border: 0;
@@ -1537,6 +1537,20 @@ export const projectCustomCss = `
     z-index: 100;
     cursor: pointer !important;
     transition: color .25s ease, opacity .25s ease, transform .25s ease;
+  }
+
+
+
+  @media (min-width: 768px) {
+    .project-navigation-arrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      visibility: visible;
+      opacity: 1;
+      z-index: 100;
+    }
   }
 
   .project-navigation-arrow:hover,
