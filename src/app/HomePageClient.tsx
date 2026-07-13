@@ -36,6 +36,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   const [contactContent, setContactContent] = useState<ContactSectionContent | null>(initialContent.contactContent);
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(initialContent.clientLogos);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialContent.socialLinks);
+  const [activeProjectFilter, setActiveProjectFilter] = useState('all');
 
   const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all', ...Array.from(new Set(initialContent.projects.map(p => p.category).filter(Boolean)))]);
   const [contentError, setContentError] = useState<string | null>(null);
@@ -301,6 +302,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 
         const selectedFilter = button.getAttribute('data-filter') || 'all';
         activeCategoryFilter = selectedFilter;
+        setActiveProjectFilter(selectedFilter);
         syncProjectSequence(selectedFilter);
 
         projectCards.forEach(card => {
@@ -459,7 +461,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       {portfolioProjects.length === 0 && !isContentLoading && <div className="project-empty-state">No published projects available.</div>}
       {portfolioProjects.map((project) => (
         <a
-          href={`/project/${project.id}`}
+          href={`/project/${project.id}?filter=${encodeURIComponent(activeProjectFilter)}`}
           className="project-card"
           data-category={project.category}
           key={project.id}
