@@ -1777,6 +1777,106 @@ export const projectCustomCss = `
     }
   }
 
+
+  /* Small-screen project detail layout fixes. Keep overview cards and impact metrics readable. */
+  @media (max-width: 480px) {
+    .proj-overview .wrap,
+    .proj-results .wrap {
+      width: 100% !important;
+      padding-inline: clamp(18px, 6vw, 24px) !important;
+    }
+
+    .proj-overview .overview-grid {
+      width: 100% !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 34px !important;
+      justify-items: stretch !important;
+    }
+
+    .proj-overview .sec-h2,
+    .proj-overview .ov-big,
+    .proj-overview .ov-p {
+      max-width: 100% !important;
+      text-align: left !important;
+    }
+
+    .proj-overview .ov-cards {
+      width: 100% !important;
+      max-width: 100% !important;
+      align-items: stretch !important;
+    }
+
+    .proj-overview .ov-card {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: 42px minmax(0, 1fr) !important;
+      gap: 14px !important;
+      padding: 18px !important;
+      border-radius: 16px !important;
+    }
+
+    .proj-overview .ov-icon {
+      width: 38px !important;
+      height: 38px !important;
+    }
+
+    .proj-results .impact-card-grid {
+      width: 100% !important;
+      grid-template-columns: minmax(0, min(100%, 300px)) !important;
+      justify-content: center !important;
+      justify-items: stretch !important;
+      gap: 18px !important;
+    }
+
+    .proj-results .impact-metric-card {
+      width: 100% !important;
+      min-height: 0 !important;
+      padding: 28px 22px !important;
+      display: grid !important;
+      justify-items: center !important;
+      text-align: center !important;
+      overflow: visible !important;
+    }
+
+    .proj-results .impact-metric-label {
+      max-width: 100% !important;
+      margin-bottom: 24px !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .proj-results .impact-metric-row {
+      width: auto !important;
+      max-width: 100% !important;
+      display: grid !important;
+      grid-template-columns: max-content 26px max-content !important;
+      justify-content: center !important;
+      justify-items: center !important;
+      align-items: end !important;
+      column-gap: 10px !important;
+    }
+
+    .proj-results .impact-before-label,
+    .proj-results .impact-after-label {
+      white-space: nowrap !important;
+      word-break: normal !important;
+      overflow-wrap: normal !important;
+      letter-spacing: .12em !important;
+    }
+
+    .proj-results .impact-value-group {
+      min-width: 0 !important;
+      align-items: center !important;
+      text-align: center !important;
+    }
+
+    .proj-results .impact-arrow {
+      width: 26px !important;
+      line-height: 1 !important;
+      align-self: end !important;
+      transform: none !important;
+    }
+  }
+
   @media (min-width: 769px) {
     .mob-nav,
     .mob-nav.open {
