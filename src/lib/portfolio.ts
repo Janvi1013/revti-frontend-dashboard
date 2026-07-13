@@ -83,6 +83,8 @@ export type ProjectReelSection = {
   title?: string;
   description?: string;
   videoUrl?: string;
+  videoUploadUrl?: string;
+  videoLinkUrl?: string;
   posterUrl?: string;
   autoplay?: boolean;
   muted?: boolean;
@@ -228,6 +230,30 @@ const resolveAssetUrl = (value: string): string => {
   return looksLikeImageUrl(resolved) ? resolved : '';
 };
 
+const resolveMediaUrl = (value: string): string => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  if (/^https?:\/\//.test(trimmed) || /^(data:video\/|blob:)/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    if (/^\/(uploads|media|storage|files|assets)/.test(trimmed)) {
+      try {
+        const apiBaseUrl = getBackendBaseUrl();
+        return apiBaseUrl ? `${apiBaseUrl}${trimmed}` : trimmed;
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+
+  return `/${trimmed.replace(/^\/+/, '')}`;
+};
+
 const splitMetricDisplayValue = (displayValue: string) => {
   const match = displayValue.trim().match(/^(-?\d+(?:\.\d+)?)(.*)$/);
   if (!match) return { value: 0, suffix: '' };
@@ -265,7 +291,32 @@ export function normalizeProjectReelSection(value: unknown): ProjectReelSection 
 
   const reel = value as Record<string, unknown>;
   const enabled = getBooleanValue(reel, ['enabled', 'is_enabled', 'isEnabled', 'active'], false);
-  const videoUrl = resolveAssetUrl(getStringValue(reel, ['videoUrl', 'video_url', 'video', 'url', 'src']));
+  const videoUploadUrl = resolveMediaUrl(getStringValue(reel, [
+    'videoUploadUrl',
+    'video_upload_url',
+    'uploadedVideoUrl',
+    'uploaded_video_url',
+    'videoFileUrl',
+    'video_file_url',
+    'uploadedVideo',
+    'videoFile',
+    'video_file',
+    'upload',
+    'file',
+  ]));
+  const videoLinkUrl = resolveMediaUrl(getStringValue(reel, [
+    'videoLinkUrl',
+    'video_link_url',
+    'videoLink',
+    'video_link',
+    'linkUrl',
+    'link_url',
+    'externalVideoUrl',
+    'external_video_url',
+    'externalUrl',
+    'external_url',
+  ]));
+  const videoUrl = videoUploadUrl || resolveMediaUrl(getStringValue(reel, ['videoUrl', 'video_url', 'video', 'url', 'src'])) || videoLinkUrl;
 
   if (!enabled || !videoUrl) return undefined;
 
@@ -274,6 +325,8 @@ export function normalizeProjectReelSection(value: unknown): ProjectReelSection 
     title: getStringValue(reel, ['title', 'heading']),
     description: getStringValue(reel, ['description', 'desc', 'text']),
     videoUrl,
+    videoUploadUrl,
+    videoLinkUrl,
     posterUrl: resolveAssetUrl(getStringValue(reel, ['posterUrl', 'poster_url', 'poster', 'thumbnail', 'thumbnailUrl'])),
     autoplay: getBooleanValue(reel, ['autoplay', 'autoPlay'], false),
     muted: getBooleanValue(reel, ['muted', 'mute'], true),

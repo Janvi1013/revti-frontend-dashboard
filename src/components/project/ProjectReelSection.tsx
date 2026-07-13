@@ -44,7 +44,7 @@ export default function ProjectReelSection({ reel }: ProjectReelSectionProps) {
           </div>
         )}
 
-        <div className="project-reel-canvas rv" style={canvasStyle}>
+        <div className="project-reel-canvas rv" style={canvasStyle} data-disable-project-swipe>
           {!hasError ? (
             <video
               key={videoUrl}

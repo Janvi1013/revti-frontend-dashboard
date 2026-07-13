@@ -77,6 +77,15 @@ export type Project = {
     title?: string;
     description?: string;
     videoUrl?: string;
+    video_url?: string;
+    videoUploadUrl?: string;
+    video_upload_url?: string;
+    uploadedVideoUrl?: string;
+    uploaded_video_url?: string;
+    videoLinkUrl?: string;
+    video_link_url?: string;
+    videoLink?: string;
+    video_link?: string;
     posterUrl?: string;
     autoplay?: boolean;
     muted?: boolean;
