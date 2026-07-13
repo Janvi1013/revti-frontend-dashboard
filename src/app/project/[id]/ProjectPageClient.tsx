@@ -4,28 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
-
-const toFilterKey = (value?: string | null) => (value || 'all').trim().toLowerCase().replace(/\s+/g, '-');
-
-const projectMatchesFilter = (project: PortfolioProject, filter: string) => {
-  const filterKey = toFilterKey(filter);
-  if (filterKey === 'all') return true;
-
-  return [
-    project.category,
-    ...project.tags,
-  ].some(value => toFilterKey(value) === filterKey);
-};
-
-const getUniqueProjects = (items: PortfolioProject[]) => {
-  const seen = new Set<string>();
-  return items.filter(item => {
-    if (!item.id || seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
-};
+import { getPublishedProjects, loadWebsiteContent, normalizeFilterSlug, projectMatchesFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
 const getProjectHref = (projectId: string, filter: string) => `/project/${projectId}?filter=${encodeURIComponent(filter || 'all')}`;
 
@@ -61,33 +40,45 @@ export default function ProjectPageClient({
   const [isProjectNavigating, setIsProjectNavigating] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; enabled: boolean }>({ x: 0, y: 0, enabled: false });
 
-  const requestedFilter = searchParams.get('filter') || 'all';
-  const allProjects = useMemo(() => getUniqueProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
-  const validFilterKeys = useMemo(
-    () => new Set(['all', ...allProjects.flatMap(item => [item.category, ...item.tags].map(toFilterKey))]),
-    [allProjects]
+  const rawFilter = searchParams.get('filter')?.trim() || 'all';
+  const activeFilter = normalizeFilterSlug(rawFilter) || 'all';
+  const allProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
+  const requestedProjects = useMemo(
+    () => activeFilter === 'all' ? allProjects : allProjects.filter(item => projectMatchesFilter(item, activeFilter)),
+    [activeFilter, allProjects]
   );
-  const activeFilter = validFilterKeys.has(toFilterKey(requestedFilter)) ? requestedFilter : 'all';
-  const activeFilterKey = toFilterKey(activeFilter);
-  const matchingProjects = useMemo(
-    () => activeFilterKey === 'all' ? allProjects : allProjects.filter(item => projectMatchesFilter(item, activeFilterKey)),
-    [activeFilterKey, allProjects]
+  const navigationProjects = useMemo(() => {
+    if (!project) return requestedProjects.length ? requestedProjects : allProjects;
+    const currentExists = requestedProjects.some(item => String(item.id) === String(project.id));
+    return requestedProjects.length > 0 && currentExists ? requestedProjects : allProjects;
+  }, [allProjects, project, requestedProjects]);
+  const currentIndex = useMemo(
+    () => project ? navigationProjects.findIndex(item => String(item.id) === String(project.id)) : -1,
+    [navigationProjects, project]
   );
-  const navigationProjects = useMemo(
-    () => project && matchingProjects.some(item => item.id === project.id) ? matchingProjects : allProjects,
-    [allProjects, matchingProjects, project]
-  );
-  const projectNavigation = useMemo(() => {
-    if (!project || navigationProjects.length <= 1) return null;
-    const currentIndex = navigationProjects.findIndex(item => item.id === project.id);
-    if (currentIndex === -1) return null;
+  const canNavigate = currentIndex >= 0 && navigationProjects.length > 1;
+  const previousProject = canNavigate
+    ? navigationProjects[(currentIndex - 1 + navigationProjects.length) % navigationProjects.length]
+    : undefined;
+  const nextProject = canNavigate
+    ? navigationProjects[(currentIndex + 1) % navigationProjects.length]
+    : undefined;
+  const projectNavigation = useMemo(() => (
+    canNavigate && previousProject && nextProject
+      ? { previous: previousProject, next: nextProject, filter: activeFilter, currentIndex }
+      : null
+  ), [activeFilter, canNavigate, currentIndex, nextProject, previousProject]);
 
-    return {
-      previous: navigationProjects[(currentIndex - 1 + navigationProjects.length) % navigationProjects.length],
-      next: navigationProjects[(currentIndex + 1) % navigationProjects.length],
-      filter: navigationProjects === matchingProjects ? activeFilter : 'all',
-    };
-  }, [activeFilter, matchingProjects, navigationProjects, project]);
+  useEffect(() => {
+    console.log('Active filter:', activeFilter);
+    console.log('Published IDs:', allProjects.map((item) => item.id));
+    console.log('Filtered IDs:', requestedProjects.map((item) => item.id));
+    console.log('Navigation IDs:', navigationProjects.map((item) => item.id));
+    console.log('Current index:', currentIndex);
+    console.log('Previous/Next IDs:', previousProject?.id, nextProject?.id);
+    if (previousProject) console.log('Previous URL:', getProjectHref(previousProject.id, activeFilter));
+    if (nextProject) console.log('Next URL:', getProjectHref(nextProject.id, activeFilter));
+  }, [activeFilter, allProjects, currentIndex, navigationProjects, nextProject, previousProject, requestedProjects]);
 
   const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
     if (!targetProject || isProjectNavigating) return;
@@ -99,11 +90,11 @@ export default function ProjectPageClient({
     modal?.classList.remove('open');
     document.body.style.overflow = '';
 
-    router.push(getProjectHref(targetProject.id, projectNavigation?.filter || 'all'), { scroll: true });
-  }, [isProjectNavigating, projectNavigation?.filter, router]);
+    router.push(getProjectHref(targetProject.id, activeFilter || 'all'), { scroll: true });
+  }, [activeFilter, isProjectNavigating, router]);
 
-  const goToPreviousProject = useCallback(() => navigateToProject(projectNavigation?.previous), [navigateToProject, projectNavigation?.previous]);
-  const goToNextProject = useCallback(() => navigateToProject(projectNavigation?.next), [navigateToProject, projectNavigation?.next]);
+  const goToPreviousProject = useCallback(() => navigateToProject(previousProject), [navigateToProject, previousProject]);
+  const goToNextProject = useCallback(() => navigateToProject(nextProject), [navigateToProject, nextProject]);
 
   useEffect(() => {
     let active = true;

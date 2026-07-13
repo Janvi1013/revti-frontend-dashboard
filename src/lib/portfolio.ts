@@ -112,6 +112,12 @@ export type PortfolioProject = {
   id: string;
   title: string;
   category: string;
+  categorySlug?: string;
+  cat?: string;
+  categories?: string[];
+  filters?: string[];
+  status?: string;
+  sequence?: number;
   year?: string;
   client?: string;
   tagline?: string;
@@ -140,6 +146,55 @@ export type PortfolioProject = {
   icon?: string;
   placeholderGradient?: string;
 };
+
+
+export const normalizeFilterSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+export function getProjectFilterSlugs(project: PortfolioProject): string[] {
+  const rawValues = [
+    project.cat,
+    project.categorySlug,
+    project.category,
+    ...(Array.isArray(project.categories) ? project.categories : []),
+    ...(Array.isArray(project.filters) ? project.filters : []),
+  ];
+
+  return [
+    ...new Set(
+      rawValues
+        .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+        .map(normalizeFilterSlug)
+        .filter(Boolean)
+    ),
+  ];
+}
+
+export function projectMatchesFilter(project: PortfolioProject, activeFilter: string): boolean {
+  const normalizedFilter = normalizeFilterSlug(activeFilter || 'all') || 'all';
+  if (normalizedFilter === 'all') return true;
+  return getProjectFilterSlugs(project).includes(normalizedFilter);
+}
+
+export function getPublishedProjects(allProjects: PortfolioProject[]): PortfolioProject[] {
+  return allProjects
+    .filter((project) => (project.status ? project.status === 'published' : true))
+    .filter((project) => Boolean(project.id))
+    .filter(
+      (project, index, array) =>
+        array.findIndex((candidate) => String(candidate.id) === String(project.id)) === index
+    )
+    .sort((a, b) => {
+      const sequenceA = Number(a.sequence ?? 0);
+      const sequenceB = Number(b.sequence ?? 0);
+      return sequenceA - sequenceB;
+    });
+}
 
 export const fallbackPortfolioProjects: PortfolioProject[] = [
   { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty', gallery: [], stats: [], process: [], feedback: [] },
@@ -500,6 +555,8 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     id,
     title,
     category: categoryName || category,
+    categorySlug: normalizeFilterSlug(categorySlug || categoryName || category),
+    cat: categorySlug,
     year: getStringValue(item, ['year']),
     client: getStringValue(item, ['client', 'clientName']),
     tagline: getStringValue(item, ['tagline']),
@@ -539,6 +596,10 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     videoType: getStringValue(item, ['video_type', 'videoType']),
     videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
     reelSection,
+    status: getStringValue(item, ['status']) || 'published',
+    sequence: getNumberValue(item, ['sequence', 'display_order', 'displayOrder']) ?? index,
+    categories: asStringArray(item?.categories),
+    filters: asStringArray(item?.filters),
     icon: '✨',
     placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
   };
