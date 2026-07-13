@@ -30,13 +30,24 @@ export const getPortfolioEndpoint = (): string => {
   return baseUrl ? `${baseUrl}/api/portfolio` : '/api/portfolio';
 };
 
-const normalizePortfolioApiData = (data: Partial<PortfolioApiData> | null | undefined): PortfolioApiData => ({
-  projects: Array.isArray(data?.projects) ? data.projects : [],
-  categories: Array.isArray(data?.categories) ? data.categories : [],
-  siteSettings: data?.siteSettings && typeof data.siteSettings === 'object' ? data.siteSettings : {},
-  clientLogos: Array.isArray(data?.clientLogos) ? data.clientLogos : [],
-  impactNumbers: Array.isArray(data?.impactNumbers) ? data.impactNumbers : [],
-  socialLinks: Array.isArray(data?.socialLinks) ? data.socialLinks : [],
+const pickArray = <T = unknown>(...values: unknown[]): T[] => {
+  const value = values.find(Array.isArray);
+  return Array.isArray(value) ? value as T[] : [];
+};
+
+const normalizePortfolioApiData = (data: any): PortfolioApiData => ({
+  projects: pickArray(data?.projects, data?.data?.projects, data?.home?.projects),
+  categories: pickArray(data?.categories, data?.data?.categories, data?.home?.categories),
+  siteSettings: data?.siteSettings && typeof data.siteSettings === 'object'
+    ? data.siteSettings
+    : data?.data?.siteSettings && typeof data.data.siteSettings === 'object'
+      ? data.data.siteSettings
+      : data?.home?.siteSettings && typeof data.home.siteSettings === 'object'
+        ? data.home.siteSettings
+        : {},
+  clientLogos: pickArray(data?.clientLogos, data?.data?.clientLogos, data?.home?.clientLogos),
+  impactNumbers: pickArray(data?.impactNumbers, data?.data?.impactNumbers, data?.home?.impactNumbers),
+  socialLinks: pickArray(data?.socialLinks, data?.data?.socialLinks, data?.home?.socialLinks),
 });
 
 const logPortfolioDiagnostics = (details: {
@@ -98,11 +109,13 @@ export async function fetchPortfolioApiData(init?: RequestInit): Promise<Portfol
 
   const payload = (await response.json()) as ApiResponse<PortfolioApiData>;
 
-  if (!payload.data || typeof payload.data !== 'object') {
+  const responseData = payload.data ?? (payload as any);
+
+  if (!responseData || typeof responseData !== 'object') {
     throw new Error('Portfolio API returned an invalid data payload.');
   }
 
-  const data = normalizePortfolioApiData(payload.data);
+  const data = normalizePortfolioApiData(responseData);
 
   logPortfolioDiagnostics({ backendUrl, requestUrl, responseStatus: response.status, success: payload.success, data });
 
