@@ -96,6 +96,7 @@ function ProjectReelItemCard({ reel, hasError, prefersReducedMotion, onError }: 
             controls
             playsInline
             preload="metadata"
+            crossOrigin="anonymous"
             loop={Boolean(reel.loop)}
             muted={shouldMute}
             autoPlay={shouldAutoplay}
