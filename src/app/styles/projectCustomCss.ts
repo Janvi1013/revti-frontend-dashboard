@@ -269,6 +269,101 @@ export const projectCustomCss = `
   }
   .video-action-btn:hover { background:var(--glass2); color:var(--txt); border-color:rgba(124,58,237,.3); }
 
+  /* ══ PROJECT REEL ══ */
+  .project-reel-section {
+    padding: clamp(72px, 8vw, 112px) 0;
+    background:
+      radial-gradient(circle at 78% 18%, rgba(124,58,237,.12), transparent 34%),
+      radial-gradient(circle at 18% 82%, rgba(6,182,212,.10), transparent 34%),
+      var(--bg);
+    border-top: 1px solid rgba(255,255,255,.06);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    overflow: hidden;
+  }
+
+  .project-reel-inner {
+    width: min(100%, 1180px);
+    margin: 0 auto;
+    padding: 0 clamp(18px, 4vw, 60px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+    gap: clamp(34px, 6vw, 86px);
+    align-items: center;
+  }
+
+  .project-reel-inner--media-only {
+    grid-template-columns: minmax(0, 420px);
+    justify-content: center;
+  }
+
+  .project-reel-content {
+    min-width: 0;
+  }
+
+  .project-reel-title {
+    margin: 0;
+    color: var(--txt);
+    font-size: clamp(42px, 7vw, 96px);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -.07em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .project-reel-description {
+    max-width: 620px;
+    margin: clamp(18px, 3vw, 28px) 0 0;
+    color: var(--txt2);
+    font-size: clamp(15px, 1.4vw, 18px);
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+
+  .project-reel-canvas {
+    position: relative;
+    width: min(100%, 420px);
+    aspect-ratio: 9 / 16;
+    justify-self: center;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(255,255,255,.12);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
+      var(--bg3);
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 28px 90px rgba(0,0,0,.42);
+  }
+
+  .project-reel-video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    background: #000;
+  }
+
+  .project-reel-video:focus-visible {
+    outline: 3px solid var(--cyan);
+    outline-offset: -6px;
+  }
+
+  .project-reel-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    color: var(--txt2);
+    font-size: 14px;
+    line-height: 1.6;
+    background: rgba(5,5,5,.72);
+    backdrop-filter: blur(10px);
+  }
+
   /* ══ GALLERY LIGHTBOX ══ */
   .lb { position:fixed; inset:0; background:rgba(8,8,14,.97); backdrop-filter:blur(28px); z-index:50000; opacity:0; pointer-events:none; transition:opacity .3s; display:flex; align-items:center; justify-content:center; }
   .lb.open { opacity:1; pointer-events:all; }
@@ -1439,6 +1534,7 @@ export const projectCustomCss = `
 
     .proj-overview,
     .proj-process,
+    .project-reel-section,
     .proj-results,
     .proj-similar,
     .sticky-section-gallery {
@@ -1469,12 +1565,14 @@ export const projectCustomCss = `
     .wrap,
     .nav-in,
     .proj-hero-content,
-    .gallery-scroll-container {
+    .gallery-scroll-container,
+    .project-reel-inner {
       padding-inline: clamp(16px, 5vw, 24px) !important;
     }
 
     .proj-h1,
     .sec-h2,
+    .project-reel-title,
     .impact-title,
     .gallery-header h2 {
       font-size: clamp(38px, 12vw, 62px) !important;
@@ -1511,13 +1609,34 @@ export const projectCustomCss = `
     .impact-metric-row {
       justify-content: center;
     }
+
+    .project-reel-section {
+      padding-block: clamp(58px, 10vw, 86px);
+    }
+
+    .project-reel-inner {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      gap: 28px;
+      text-align: center;
+    }
+
+    .project-reel-description {
+      margin-inline: auto;
+    }
+
+    .project-reel-canvas {
+      width: min(100%, 380px);
+      border-radius: 22px;
+    }
   }
 
   @media (max-width: 420px) {
     .wrap,
     .nav-in,
     .proj-hero-content,
-    .gallery-scroll-container {
+    .gallery-scroll-container,
+    .project-reel-inner {
       padding-inline: 12px !important;
     }
 
@@ -1547,6 +1666,11 @@ export const projectCustomCss = `
     .sim-grid,
     .impact-card-grid {
       gap: 16px;
+    }
+
+    .project-reel-canvas {
+      width: min(100%, 340px);
+      border-radius: 18px;
     }
   }
 

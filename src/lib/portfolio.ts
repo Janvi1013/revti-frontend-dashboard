@@ -78,6 +78,17 @@ export type PortfolioProcessStep = {
   text?: string;
 };
 
+export type ProjectReelSection = {
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  videoUrl?: string;
+  posterUrl?: string;
+  autoplay?: boolean;
+  muted?: boolean;
+  loop?: boolean;
+};
+
 export type PortfolioProject = {
   id: string;
   title: string;
@@ -105,6 +116,7 @@ export type PortfolioProject = {
   clientLogo?: string;
   videoType?: string;
   videoUrl?: string;
+  reelSection?: ProjectReelSection;
   icon?: string;
   placeholderGradient?: string;
 };
@@ -181,8 +193,8 @@ const getStringValue = (source: any, keys: string[]): string => {
 
 const looksLikeImageUrl = (value: string): boolean => {
   if (!value) return false;
-  if (/^(data:image\/|blob:)/.test(value)) return true;
-  if (/\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(value)) return true;
+  if (/^(data:(image|video)\/|blob:)/.test(value)) return true;
+  if (/\.(avif|gif|jpe?g|png|svg|webp|m3u8|mov|mp4|mpeg|mpg|ogv|webm)(\?.*)?$/i.test(value)) return true;
   if (/\/storage\/v1\/object\/public\//.test(value)) return true;
   if (/\/object\/public\//.test(value)) return true;
   return false;
@@ -232,6 +244,41 @@ const getNumberValue = (source: any, keys: string[]): number | null => {
     }
   }
   return null;
+};
+
+const getBooleanValue = (source: any, keys: string[], fallback: boolean): boolean => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+      if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+    }
+  }
+  return fallback;
+};
+
+export function normalizeProjectReelSection(value: unknown): ProjectReelSection | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const reel = value as Record<string, unknown>;
+  const enabled = getBooleanValue(reel, ['enabled', 'is_enabled', 'isEnabled', 'active'], false);
+  const videoUrl = resolveAssetUrl(getStringValue(reel, ['videoUrl', 'video_url', 'video', 'url', 'src']));
+
+  if (!enabled || !videoUrl) return undefined;
+
+  return {
+    enabled,
+    title: getStringValue(reel, ['title', 'heading']),
+    description: getStringValue(reel, ['description', 'desc', 'text']),
+    videoUrl,
+    posterUrl: resolveAssetUrl(getStringValue(reel, ['posterUrl', 'poster_url', 'poster', 'thumbnail', 'thumbnailUrl'])),
+    autoplay: getBooleanValue(reel, ['autoplay', 'autoPlay'], false),
+    muted: getBooleanValue(reel, ['muted', 'mute'], true),
+    loop: getBooleanValue(reel, ['loop'], true),
+  };
 };
 
 const asStringArray = (value: any): string[] => {
@@ -345,6 +392,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     videoType: getStringValue(item, ['video_type', 'videoType']),
     videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
+    reelSection: normalizeProjectReelSection(item?.reelSection ?? item?.reel_section),
     icon: '✨',
     placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
   };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
 import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
@@ -663,6 +664,11 @@ export default function ProjectPageClient({
           <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
         </div>
       </section>
+
+      {project.reelSection?.enabled &&
+        project.reelSection?.videoUrl?.trim() && (
+          <ProjectReelSection reel={project.reelSection} />
+        )}
 
       {project.stats.length > 0 && (
       <section className="proj-results" id="results">
