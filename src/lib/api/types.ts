@@ -72,6 +72,25 @@ export type Project = {
   impact?: string;
   compliance?: string;
   process?: unknown[] | string;
+  reelSection?: {
+    enabled?: boolean;
+    title?: string;
+    description?: string;
+    videoUrl?: string;
+    video_url?: string;
+    videoUploadUrl?: string;
+    video_upload_url?: string;
+    uploadedVideoUrl?: string;
+    uploaded_video_url?: string;
+    videoLinkUrl?: string;
+    video_link_url?: string;
+    videoLink?: string;
+    video_link?: string;
+    posterUrl?: string;
+    autoplay?: boolean;
+    muted?: boolean;
+    loop?: boolean;
+  };
   [key: string]: unknown;
 };
 

@@ -424,8 +424,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       {impactMetrics.map((metric, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={metric.label}>
           <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
-          <div className="impact-label">{metric.label}</div>
-          <div className="impact-sub">{metric.sub}</div>
+          {metric.label && <div className="impact-label">{metric.label}</div>}
+          {metric.sub && <div className="impact-sub">{metric.sub}</div>}
         </div>
       ))}
       {impactMetrics.length === 0 && !isContentLoading && <div className="impact-item rv"><span className="impact-label">No impact numbers available.</span></div>}
@@ -474,19 +474,23 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
                   <span className="placeholder-icon">{project.icon || '✨'}</span>
                 </div>
               )}
-              <div className="card-overlay">
-                <div className="overlay-content">
-                  <span className="overlay-category">{project.category}</span>
+              {project.category && (
+                <div className="card-overlay">
+                  <div className="overlay-content">
+                    <span className="overlay-category">{project.category}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="card-info">
             <h3 className="card-title">{project.title}</h3>
             <div className="meta-container">
-              <div className="card-tags">
-                {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
-              </div>
+              {project.tags.length > 0 && (
+                <div className="card-tags">
+                  {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
+                </div>
+              )}
               <div className="show-project-view">Show Project</div>
             </div>
           </div>
@@ -502,7 +506,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     <span className="logo-carousel-eyebrow">Trusted Collaborations</span>
     <h2 className="logo-carousel-title" id="logo-carousel-title">Brands that trust our creative process</h2>
   </div>
-  <div className="logo-carousel" aria-label="Client logo carousel">
+  <div className={`logo-carousel${clientLogos.length > 1 ? ' is-marquee' : ' is-static'}`} aria-label="Client logo carousel">
     <div className="logo-carousel-track">
       {clientLogos.length === 0 && !isContentLoading && <div className="client-logo-card"><span>No client logos available.</span></div>}
       {clientLogos.map((logo) => (
@@ -510,11 +514,13 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
           {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
         </div>
       ))}
-      {clientLogos.map((logo) => (
-        <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
-          {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
-        </div>
-      ))}
+      {clientLogos.length > 1 && (
+        clientLogos.map((logo) => (
+          <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
+            {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
+          </div>
+        ))
+      )}
     </div>
   </div>
 </section>

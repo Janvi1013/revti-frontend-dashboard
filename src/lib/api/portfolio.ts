@@ -22,6 +22,8 @@ export const getBackendBaseUrl = (): string => {
 };
 
 export const getPortfolioEndpoint = (): string => {
+  if (typeof window !== 'undefined') return '/api/portfolio';
+
   const baseUrl = getBackendBaseUrl();
   return baseUrl ? `${baseUrl}/api/portfolio` : '/api/portfolio';
 };
