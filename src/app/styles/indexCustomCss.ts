@@ -2367,10 +2367,19 @@ export const indexCustomCss = `
     width: max-content;
     gap: 18px;
     padding: 6px 18px;
+  }
+
+  .logo-carousel.is-marquee .logo-carousel-track {
     animation: logoMarquee 32s linear infinite;
   }
 
-  .logo-carousel:hover .logo-carousel-track {
+  .logo-carousel.is-static .logo-carousel-track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .logo-carousel.is-marquee:hover .logo-carousel-track {
     animation-play-state: paused;
   }
 
@@ -2439,4 +2448,522 @@ export const indexCustomCss = `
       border-radius: 18px;
     }
   }
+
+  /* Dynamic content fitting: centered rows without reserved blank columns. */
+  .impact-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 280px)) !important;
+    justify-content: center;
+    justify-items: stretch;
+  }
+
+  .impact-item {
+    width: 100%;
+  }
+
+  .project-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 360px)) !important;
+    justify-content: center;
+    justify-items: stretch;
+  }
+
+  .project-empty-state {
+    grid-column: 1 / -1;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .meta-container {
+    align-items: center;
+    gap: 14px;
+  }
+
+  .meta-container:has(.card-tags) {
+    align-items: flex-start;
+  }
+
+  .show-project-view:only-child {
+    margin-top: 0;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .logo-carousel.is-static .logo-carousel-track {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cta-socials {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Final responsive safety layer for every viewport size. */
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  .wrap,
+  .nav-in,
+  .portfolio-container {
+    width: min(100%, 1400px);
+    padding-inline: clamp(18px, 4vw, 60px) !important;
+  }
+
+  section {
+    max-width: 100vw;
+  }
+
+  .hero-content,
+  .portfolio-header,
+  .logo-carousel-header,
+  .contact-cta-box {
+    width: min(100%, 980px);
+    margin-inline: auto;
+  }
+
+  .hero-h1,
+  .portfolio-title,
+  .logo-carousel-title,
+  .cta-title {
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .hero-actions,
+  .cta-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .filter-menu {
+    max-width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .filter-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-card,
+  .impact-item,
+  .client-logo-card {
+    min-width: 0;
+  }
+
+  .card-info,
+  .meta-container,
+  .card-tags {
+    min-width: 0;
+  }
+
+  .card-title,
+  .tag,
+  .client-logo-card span,
+  .cta-socials a {
+    overflow-wrap: anywhere;
+  }
+
+  .modal-card {
+    width: min(94vw, 720px) !important;
+    max-height: min(88vh, 760px);
+    overflow-y: auto;
+  }
+
+  .mob-nav {
+    width: min(86vw, 320px);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mob-nav.open {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  @media (min-width: 1180px) {
+    .filter-menu {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .nav-in {
+      height: 68px;
+      gap: 16px;
+    }
+
+    .hero {
+      min-height: auto;
+      padding-block: clamp(96px, 18vw, 140px) clamp(56px, 10vw, 90px);
+    }
+
+    .portfolio-section,
+    .logo-carousel-section,
+    .contact-cta,
+    .impact {
+      padding-block: clamp(56px, 10vw, 86px) !important;
+    }
+
+    .project-grid,
+    .impact-grid {
+      grid-template-columns: minmax(0, min(100%, 520px)) !important;
+    }
+
+    .project-card {
+      width: 100%;
+    }
+
+    .filter-menu {
+      padding-bottom: 8px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .wrap,
+    .nav-in,
+    .portfolio-container {
+      padding-inline: clamp(14px, 5vw, 22px) !important;
+    }
+
+    .hero-h1,
+    .portfolio-title,
+    .logo-carousel-title,
+    .cta-title {
+      font-size: clamp(36px, 12vw, 58px) !important;
+      line-height: 1.02 !important;
+      letter-spacing: -0.055em !important;
+    }
+
+    .hero-actions,
+    .cta-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .hero-actions a,
+    .cta-row a {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .contact-cta-box {
+      padding: clamp(28px, 8vw, 42px) clamp(18px, 6vw, 28px);
+      border-radius: 24px;
+    }
+
+    .client-logo-card {
+      width: min(100%, 260px);
+      min-width: min(100%, 170px);
+    }
+  }
+
+  @media (max-width: 380px) {
+    .wrap,
+    .nav-in,
+    .portfolio-container {
+      padding-inline: 12px !important;
+    }
+
+    .project-grid,
+    .impact-grid {
+      gap: 16px;
+    }
+
+    .card-info {
+      padding: 16px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    .mob-nav,
+    .mob-nav.open {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+  }
+/* Studio-style animated homepage project filtering */
+.portfolio-section .home-project-filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2.4vw, 34px);
+  width: min(100%, 960px);
+  max-width: 100%;
+  margin: 0 auto clamp(38px, 5vw, 66px);
+  padding: 0 18px 18px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.portfolio-section .home-project-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.portfolio-section .home-project-filter {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 8px 2px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255,255,255,.52);
+  font-family: var(--font);
+  font-size: clamp(12px, 1.1vw, 14px);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .28s cubic-bezier(.22,1,.36,1), opacity .28s cubic-bezier(.22,1,.36,1), transform .28s cubic-bezier(.22,1,.36,1);
+}
+
+.portfolio-section .home-project-filter::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -19px;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0;
+  transform: scaleX(.35);
+  transform-origin: center;
+  transition: opacity .3s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1);
+}
+
+.portfolio-section .home-project-filter:hover,
+.portfolio-section .home-project-filter:focus-visible,
+.portfolio-section .home-project-filter.is-active {
+  color: #fff;
+  opacity: 1;
+}
+
+.portfolio-section .home-project-filter:hover {
+  transform: translateY(-1px);
+}
+
+.portfolio-section .home-project-filter:focus-visible {
+  outline: 1px solid rgba(255,255,255,.5);
+  outline-offset: 8px;
+  border-radius: 999px;
+}
+
+.portfolio-section .home-project-filter.is-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.portfolio-section .home-project-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 360px)) !important;
+  gap: clamp(22px, 3vw, 38px) !important;
+  justify-content: center !important;
+  justify-items: stretch !important;
+  align-items: stretch !important;
+  width: min(100%, 1200px);
+  margin-inline: auto;
+  contain: layout paint;
+}
+
+.portfolio-section .home-project-grid-item {
+  width: 100%;
+  max-width: 360px;
+  justify-self: center;
+  animation: homeProjectCardIn .42s cubic-bezier(.22,1,.36,1) both;
+  animation-delay: calc(min(var(--project-card-index, 0), 8) * 45ms);
+  view-transition-name: match-element;
+}
+
+.portfolio-section .home-project-empty-state {
+  grid-column: 1 / -1;
+  width: min(100%, 520px);
+  justify-self: center;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  background: rgba(255,255,255,.035);
+  color: var(--txt2);
+  text-align: center;
+}
+
+.portfolio-section .home-project-empty-state p {
+  margin: 0 0 16px;
+}
+
+.portfolio-section .home-project-empty-action {
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.35);
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 0 4px;
+}
+
+@keyframes homeProjectCardIn {
+  from { opacity: 0; transform: translateY(22px) scale(.975); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .42s;
+  animation-timing-function: cubic-bezier(.22,1,.36,1);
+}
+
+@media (max-width: 640px) {
+  .portfolio-section .home-project-filters {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    width: calc(100% + 36px);
+    max-width: none;
+    margin-left: -18px;
+    margin-right: -18px;
+    padding-inline: 18px;
+    gap: 22px;
+  }
+
+  .portfolio-section .home-project-grid {
+    grid-template-columns: minmax(0, min(100%, 360px)) !important;
+    gap: 22px !important;
+  }
+
+  .portfolio-section .home-project-grid-item {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-section .home-project-grid-item {
+    animation: none !important;
+  }
+
+  .portfolio-section .home-project-filter,
+  .portfolio-section .home-project-filter::after {
+    transition-duration: .01ms !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: .01ms !important;
+  }
+}
+
+
+/* Minimal portfolio filter bar override: text-only active state, no filled box. */
+.portfolio-section .portfolio-filter-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(18px, 2.5vw, 40px);
+  width: min(100%, 960px);
+  max-width: 100%;
+  margin: 0 auto clamp(38px, 5vw, 66px);
+  padding: 18px 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  background: transparent !important;
+}
+
+.portfolio-section .portfolio-filter-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.portfolio-section .portfolio-filter-button,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button.active,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button.is-active {
+  position: relative;
+  flex: 0 0 auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 10px 0 14px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,.55) !important;
+  font-family: var(--font);
+  font-size: clamp(12px, 1vw, 15px);
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+.portfolio-section .portfolio-filter-button::before {
+  display: none !important;
+}
+
+.portfolio-section .portfolio-filter-button::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 1;
+  transform: translateX(-50%);
+  transition: width 260ms ease;
+}
+
+.portfolio-section .portfolio-filter-button:hover,
+.portfolio-section .portfolio-filter-button:focus-visible {
+  color: rgba(255,255,255,.92) !important;
+  transform: translateY(-1px);
+}
+
+.portfolio-section .portfolio-filter-button.is-active,
+.portfolio-section .portfolio-filter-button.active {
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.portfolio-section .portfolio-filter-button.is-active::after,
+.portfolio-section .portfolio-filter-button.active::after {
+  width: 100%;
+}
+
+.portfolio-section .portfolio-filter-button:focus-visible {
+  outline: 1px solid rgba(255,255,255,.5);
+  outline-offset: 8px;
+  border-radius: 999px !important;
+}
+
+@media (max-width: 767px) {
+  .portfolio-section .portfolio-filter-nav {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    width: calc(100% + 40px);
+    max-width: none;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-inline: 20px;
+    scroll-padding-inline: 20px;
+  }
+}
+
 `;

@@ -78,10 +78,41 @@ export type PortfolioProcessStep = {
   text?: string;
 };
 
+export type ProjectReelItem = {
+  id: string;
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  videoUrl?: string;
+  posterUrl?: string;
+  autoplay?: boolean;
+  muted?: boolean;
+  loop?: boolean;
+  displayOrder?: number;
+};
+
+export type ProjectReelSection = {
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  items: ProjectReelItem[];
+};
+
+export type ProjectSectionVisibility = {
+  overview?: boolean;
+  process?: boolean;
+  impact?: boolean;
+  gallery?: boolean;
+  reel?: boolean;
+  videoShowcase?: boolean;
+  relatedProjects?: boolean;
+};
+
 export type PortfolioProject = {
   id: string;
   title: string;
   category: string;
+  categorySlug?: string;
   year?: string;
   client?: string;
   tagline?: string;
@@ -102,11 +133,36 @@ export type PortfolioProject = {
   compliance?: string;
   process: PortfolioProcessStep[];
   feedback: PortfolioFeedback[];
+  status?: string;
+  sequence?: number;
+  sectionVisibility?: ProjectSectionVisibility;
   clientLogo?: string;
   videoType?: string;
   videoUrl?: string;
+  reelSection?: ProjectReelSection;
   icon?: string;
   placeholderGradient?: string;
+};
+
+export const normalizeFilterSlug = (value?: string | null) => (value || 'all')
+  .trim()
+  .toLowerCase()
+  .replace(/&/g, 'and')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'all';
+
+export const getProjectFilterSlugs = (project: PortfolioProject) => Array.from(new Set([
+  project.categorySlug,
+  project.category,
+]
+  .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+  .map(normalizeFilterSlug)
+  .filter(Boolean)));
+
+export const projectMatchesFilter = (project: PortfolioProject, activeFilter: string) => {
+  const filterSlug = normalizeFilterSlug(activeFilter);
+  if (filterSlug === 'all') return true;
+  return getProjectFilterSlugs(project).includes(filterSlug);
 };
 
 export const fallbackPortfolioProjects: PortfolioProject[] = [
@@ -181,8 +237,8 @@ const getStringValue = (source: any, keys: string[]): string => {
 
 const looksLikeImageUrl = (value: string): boolean => {
   if (!value) return false;
-  if (/^(data:image\/|blob:)/.test(value)) return true;
-  if (/\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(value)) return true;
+  if (/^(data:(image|video)\/|blob:)/.test(value)) return true;
+  if (/\.(avif|gif|jpe?g|png|svg|webp|m3u8|mov|mp4|mpeg|mpg|ogv|webm)(\?.*)?$/i.test(value)) return true;
   if (/\/storage\/v1\/object\/public\//.test(value)) return true;
   if (/\/object\/public\//.test(value)) return true;
   return false;
@@ -216,6 +272,30 @@ const resolveAssetUrl = (value: string): string => {
   return looksLikeImageUrl(resolved) ? resolved : '';
 };
 
+const resolveMediaUrl = (value: string): string => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  if (/^https?:\/\//.test(trimmed) || /^(data:video\/|blob:)/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    if (/^\/(uploads|media|storage|files|assets)/.test(trimmed)) {
+      try {
+        const apiBaseUrl = getBackendBaseUrl();
+        return apiBaseUrl ? `${apiBaseUrl}${trimmed}` : trimmed;
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+
+  return `/${trimmed.replace(/^\/+/, '')}`;
+};
+
 const splitMetricDisplayValue = (displayValue: string) => {
   const match = displayValue.trim().match(/^(-?\d+(?:\.\d+)?)(.*)$/);
   if (!match) return { value: 0, suffix: '' };
@@ -232,6 +312,128 @@ const getNumberValue = (source: any, keys: string[]): number | null => {
     }
   }
   return null;
+};
+
+const getBooleanValue = (source: any, keys: string[], fallback: boolean): boolean => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+      if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+    }
+  }
+  return fallback;
+};
+
+const getProjectReelVideoUrl = (source: Record<string, unknown>) => {
+  const videoUploadUrl = resolveMediaUrl(getStringValue(source, [
+    'videoUploadUrl',
+    'video_upload_url',
+    'uploadedVideoUrl',
+    'uploaded_video_url',
+    'videoFileUrl',
+    'video_file_url',
+    'uploadedVideo',
+    'videoFile',
+    'video_file',
+    'upload',
+    'file',
+  ]));
+  const videoLinkUrl = resolveMediaUrl(getStringValue(source, [
+    'videoLinkUrl',
+    'video_link_url',
+    'videoLink',
+    'video_link',
+    'linkUrl',
+    'link_url',
+    'externalVideoUrl',
+    'external_video_url',
+    'externalUrl',
+    'external_url',
+  ]));
+
+  return videoUploadUrl || resolveMediaUrl(getStringValue(source, ['videoUrl', 'video_url', 'video', 'url', 'src'])) || videoLinkUrl;
+};
+
+const getReelDisplayOrder = (source: Record<string, unknown>, keys: string[], fallback: number): number => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return fallback;
+};
+
+function normalizeProjectReelItem(value: unknown, index: number, fallbackId: string): ProjectReelItem | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const item = value as Record<string, unknown>;
+  const id = getStringValue(item, ['id', '_id', 'key']) || `${fallbackId}-reel-${index}`;
+  const videoUrl = getProjectReelVideoUrl(item);
+  const posterUrl = resolveAssetUrl(getStringValue(item, ['posterUrl', 'poster_url', 'poster', 'thumbnail', 'thumbnailUrl']));
+
+  return {
+    id,
+    enabled: typeof item.enabled === 'boolean' ? item.enabled : getBooleanValue(item, ['is_enabled', 'isEnabled', 'active'], true),
+    title: getStringValue(item, ['title', 'heading']),
+    description: getStringValue(item, ['description', 'desc', 'text']),
+    videoUrl,
+    posterUrl,
+    autoplay: getBooleanValue(item, ['autoplay', 'autoPlay'], false),
+    muted: getBooleanValue(item, ['muted', 'mute'], true),
+    loop: getBooleanValue(item, ['loop'], true),
+    displayOrder: getReelDisplayOrder(item, ['displayOrder', 'display_order', 'sequence', 'order'], index),
+  };
+}
+
+export function normalizeProjectReelSection(value: unknown): ProjectReelSection | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const reel = value as Record<string, unknown>;
+  const enabled = typeof reel.enabled === 'boolean'
+    ? reel.enabled
+    : getBooleanValue(reel, ['is_enabled', 'isEnabled', 'active'], false);
+  const fallbackId = getStringValue(reel, ['id', '_id', 'key']) || 'project';
+  const rawItems = Array.isArray(reel.items) ? reel.items : [];
+  const oldShapeVideoUrl = getProjectReelVideoUrl(reel);
+  const items = (rawItems.length ? rawItems : oldShapeVideoUrl ? [reel] : [])
+    .map((item, index) => normalizeProjectReelItem(item, index, fallbackId))
+    .filter((item): item is ProjectReelItem => Boolean(item))
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+  return {
+    enabled,
+    title: getStringValue(reel, ['title', 'heading']),
+    description: getStringValue(reel, ['description', 'desc', 'text']),
+    items,
+  };
+};
+
+const getOptionalBoolean = (source: any, key: string): boolean | undefined => (
+  typeof source?.[key] === 'boolean' ? source[key] : undefined
+);
+
+export function normalizeProjectSectionVisibility(value: unknown): ProjectSectionVisibility | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const rawVisibility = value as Record<string, unknown>;
+  const sectionVisibility: ProjectSectionVisibility = {
+    overview: getOptionalBoolean(rawVisibility, 'overview'),
+    process: getOptionalBoolean(rawVisibility, 'process'),
+    impact: getOptionalBoolean(rawVisibility, 'impact'),
+    gallery: getOptionalBoolean(rawVisibility, 'gallery'),
+    reel: getOptionalBoolean(rawVisibility, 'reel'),
+    videoShowcase: getOptionalBoolean(rawVisibility, 'videoShowcase'),
+    relatedProjects: getOptionalBoolean(rawVisibility, 'relatedProjects'),
+  };
+  const normalizedVisibility = Object.fromEntries(
+    Object.entries(sectionVisibility).filter(([, sectionValue]) => typeof sectionValue === 'boolean')
+  ) as ProjectSectionVisibility;
+
+  return Object.keys(normalizedVisibility).length ? normalizedVisibility : undefined;
 };
 
 const asStringArray = (value: any): string[] => {
@@ -303,11 +505,26 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const image = resolveAssetUrl(getStringValue(item, ['thumb', 'image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']));
   const gallery = asStringArray(item?.gallery).map(resolveAssetUrl);
   const categoryName = getStringValue(item, ['category_name', 'categoryName']) || getStringValue(item?.category, ['name', 'title', 'label']);
+  const rawSectionVisibility = item?.sectionVisibility ?? item?.section_visibility;
+  const sectionVisibility = normalizeProjectSectionVisibility(rawSectionVisibility);
+  const rawReelSection = item?.reelSection ?? item?.reel_section;
+  const reelSection = normalizeProjectReelSection(rawReelSection);
+
+  if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
+    console.log('Raw section_visibility:', rawSectionVisibility);
+    console.log('Normalized sectionVisibility:', sectionVisibility);
+  }
+
+  if (process.env.NODE_ENV !== 'production' && rawReelSection) {
+    console.log('Raw Reel:', rawReelSection);
+    console.log('Normalized Reel:', reelSection);
+  }
 
   return {
     id,
     title,
     category: categoryName || category,
+    categorySlug: normalizeFilterSlug(categorySlug || categoryName || category),
     year: getStringValue(item, ['year']),
     client: getStringValue(item, ['client', 'clientName']),
     tagline: getStringValue(item, ['tagline']),
@@ -342,9 +559,13 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
       role: getStringValue(f, ['role', 'designation', 'title']),
       text: getStringValue(f, ['text', 'quote', 'feedback']),
     })).filter(f => f.name || f.text),
+    status: getStringValue(item, ['status']) || 'published',
+    sequence: getNumberValue(item, ['sequence', 'display_order', 'displayOrder']) ?? index,
+    sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     videoType: getStringValue(item, ['video_type', 'videoType']),
     videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
+    reelSection,
     icon: '✨',
     placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))',
   };
@@ -516,7 +737,9 @@ export const loadWebsiteContent = async (init?: RequestInit): Promise<WebsiteCon
     };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
-    console.error('Unable to load live website content.', normalizedError);
+    if (!init?.signal?.aborted && process.env.NODE_ENV !== 'production') {
+      console.error('Unable to load live website content.', normalizedError);
+    }
     return {
       ok: false,
       content: fallbackWebsiteContent,
