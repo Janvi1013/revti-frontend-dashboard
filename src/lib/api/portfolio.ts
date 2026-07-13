@@ -13,12 +13,14 @@ export const PORTFOLIO_TAGS = [
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 export const getBackendBaseUrl = (): string => {
-  const configuredUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, '');
+  if (typeof window !== 'undefined') return '';
+
+  const configuredUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.replace(/\/$/, '');
 
   if (configuredUrl) return configuredUrl;
   if (isDevelopment) return '';
 
-  throw new Error('NEXT_PUBLIC_BACKEND_URL is required in production to load live website content.');
+  throw new Error('NEXT_PUBLIC_BACKEND_URL or BACKEND_URL is required in production to load live website content.');
 };
 
 export const getPortfolioEndpoint = (): string => {

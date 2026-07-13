@@ -43,6 +43,16 @@ export type ProjectCategory = {
   [key: string]: unknown;
 };
 
+export type ProjectSectionVisibility = {
+  overview?: boolean;
+  process?: boolean;
+  impact?: boolean;
+  gallery?: boolean;
+  reel?: boolean;
+  videoShowcase?: boolean;
+  relatedProjects?: boolean;
+};
+
 export type Project = {
   id: string;
   cat?: string;
@@ -72,6 +82,8 @@ export type Project = {
   impact?: string;
   compliance?: string;
   process?: unknown[] | string;
+  sectionVisibility?: ProjectSectionVisibility;
+  section_visibility?: ProjectSectionVisibility;
   reelSection?: {
     enabled?: boolean;
     title?: string;

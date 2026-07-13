@@ -1498,10 +1498,6 @@ export const projectCustomCss = `
     background: rgba(255,255,255,.10);
   }
 
-  .project-switcher {
-    display: none !important;
-  }
-
   .project-navigation-shell {
     position: fixed;
     inset: 0;

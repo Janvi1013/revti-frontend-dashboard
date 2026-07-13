@@ -91,6 +91,16 @@ export type ProjectReelSection = {
   loop?: boolean;
 };
 
+export type ProjectSectionVisibility = {
+  overview?: boolean;
+  process?: boolean;
+  impact?: boolean;
+  gallery?: boolean;
+  reel?: boolean;
+  videoShowcase?: boolean;
+  relatedProjects?: boolean;
+};
+
 export type PortfolioProject = {
   id: string;
   title: string;
@@ -115,6 +125,7 @@ export type PortfolioProject = {
   compliance?: string;
   process: PortfolioProcessStep[];
   feedback: PortfolioFeedback[];
+  sectionVisibility?: ProjectSectionVisibility;
   clientLogo?: string;
   videoType?: string;
   videoUrl?: string;
@@ -334,6 +345,30 @@ export function normalizeProjectReelSection(value: unknown): ProjectReelSection 
   };
 };
 
+const getOptionalBoolean = (source: any, key: string): boolean | undefined => (
+  typeof source?.[key] === 'boolean' ? source[key] : undefined
+);
+
+export function normalizeProjectSectionVisibility(value: unknown): ProjectSectionVisibility | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+  const rawVisibility = value as Record<string, unknown>;
+  const sectionVisibility: ProjectSectionVisibility = {
+    overview: getOptionalBoolean(rawVisibility, 'overview'),
+    process: getOptionalBoolean(rawVisibility, 'process'),
+    impact: getOptionalBoolean(rawVisibility, 'impact'),
+    gallery: getOptionalBoolean(rawVisibility, 'gallery'),
+    reel: getOptionalBoolean(rawVisibility, 'reel'),
+    videoShowcase: getOptionalBoolean(rawVisibility, 'videoShowcase'),
+    relatedProjects: getOptionalBoolean(rawVisibility, 'relatedProjects'),
+  };
+  const normalizedVisibility = Object.fromEntries(
+    Object.entries(sectionVisibility).filter(([, sectionValue]) => typeof sectionValue === 'boolean')
+  ) as ProjectSectionVisibility;
+
+  return Object.keys(normalizedVisibility).length ? normalizedVisibility : undefined;
+};
+
 const asStringArray = (value: any): string[] => {
   if (Array.isArray(value)) {
     return value
@@ -403,6 +438,13 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const image = resolveAssetUrl(getStringValue(item, ['thumb', 'image', 'imageUrl', 'thumbnail', 'thumbnailUrl', 'coverImage', 'coverImageUrl']));
   const gallery = asStringArray(item?.gallery).map(resolveAssetUrl);
   const categoryName = getStringValue(item, ['category_name', 'categoryName']) || getStringValue(item?.category, ['name', 'title', 'label']);
+  const rawSectionVisibility = item?.sectionVisibility ?? item?.section_visibility;
+  const sectionVisibility = normalizeProjectSectionVisibility(rawSectionVisibility);
+
+  if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
+    console.log('Raw section_visibility:', rawSectionVisibility);
+    console.log('Normalized sectionVisibility:', sectionVisibility);
+  }
 
   return {
     id,
@@ -442,6 +484,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
       role: getStringValue(f, ['role', 'designation', 'title']),
       text: getStringValue(f, ['text', 'quote', 'feedback']),
     })).filter(f => f.name || f.text),
+    sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     videoType: getStringValue(item, ['video_type', 'videoType']),
     videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const getBackendPortfolioUrl = () => {
   const configuredUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)?.replace(/\/$/, '');
   return configuredUrl ? `${configuredUrl}/api/portfolio` : '';

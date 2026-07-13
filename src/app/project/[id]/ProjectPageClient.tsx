@@ -494,24 +494,6 @@ export default function ProjectPageClient({
   }, [isMobileNavOpen]);
 
   useEffect(() => {
-    document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
-
-    const closeMobileNavOnDesktop = () => {
-      if (window.innerWidth > 768) {
-        setIsMobileNavOpen(false);
-      }
-    };
-
-    closeMobileNavOnDesktop();
-    window.addEventListener('resize', closeMobileNavOnDesktop);
-
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('resize', closeMobileNavOnDesktop);
-    };
-  }, [isMobileNavOpen]);
-
-  useEffect(() => {
     if (!project) return;
     // 1. Reveal Observer
     const ro = new IntersectionObserver(e => e.forEach(en => {
@@ -567,6 +549,33 @@ export default function ProjectPageClient({
   ].filter(card => card.text);
   const processSteps = project.process.length ? project.process : [];
   const similarProjects = projects.filter(item => item.id !== project.id).slice(0, 3);
+  const hasOverviewContent = Boolean(
+    project.overviewTitle?.trim() ||
+    project.description?.trim() ||
+    project.shortDescription?.trim() ||
+    project.challenge?.trim() ||
+    project.approach?.trim() ||
+    project.impact?.trim() ||
+    project.compliance?.trim()
+  );
+  const hasProcessContent = processSteps.length > 0;
+  const hasImpactContent = project.stats.length > 0;
+  const hasGalleryContent = galleryImages.length > 0;
+  const hasReelContent = Boolean(project.reelSection?.enabled && project.reelSection?.videoUrl?.trim());
+  const hasVideoContent = Boolean(project.videoUrl?.trim());
+  const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
+  const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
+  const showImpact = project.sectionVisibility?.impact !== false && hasImpactContent;
+  const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
+  const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
+  const showVideoShowcase = project.sectionVisibility?.videoShowcase !== false && hasVideoContent;
+  const showRelatedProjects = project.sectionVisibility?.relatedProjects !== false && similarProjects.length > 0;
+
+  if (process.env.NODE_ENV !== 'production' && project.sectionVisibility) {
+    console.log('Normalized sectionVisibility:', project.sectionVisibility);
+    console.log('Overview Visible:', showOverview);
+    console.log('Video Showcase Visible:', showVideoShowcase);
+  }
 
   return (
     <>
@@ -695,6 +704,7 @@ export default function ProjectPageClient({
         </div>
       </header>
 
+      {showOverview && (
       <section className="proj-overview" id="overview">
         <div className="wrap">
           <div className="overview-grid">
@@ -721,8 +731,9 @@ export default function ProjectPageClient({
           </div>
         </div>
       </section>
+      )}
 
-      {processSteps.length > 0 && (
+      {showProcess && (
       <section className="proj-process" id="process">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
@@ -742,6 +753,7 @@ export default function ProjectPageClient({
       </section>
       )}
 
+      {showGallery && (
       <section id="project-gallery" className="sticky-section-gallery" data-disable-project-swipe>
           <div className="gallery-scroll-container">
               <div className="gallery-header">
@@ -765,13 +777,13 @@ export default function ProjectPageClient({
           <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
         </div>
       </section>
+      )}
 
-      {project.reelSection?.enabled &&
-        project.reelSection?.videoUrl?.trim() && (
+      {showReel && project.reelSection && (
           <ProjectReelSection reel={project.reelSection} />
-        )}
+      )}
 
-      {project.stats.length > 0 && (
+      {showImpact && (
       <section className="proj-results" id="results">
         <div className="wrap impact-showcase">
           <h2 className="impact-title rv">Impact <span className="muted">Results</span></h2>
@@ -794,6 +806,7 @@ export default function ProjectPageClient({
       </section>
       )}
 
+      {showRelatedProjects && (
       <section className="proj-similar" id="similar">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s" }}>Explore <span className="grad">related work</span></h2>
@@ -816,6 +829,7 @@ export default function ProjectPageClient({
           </div>
         </div>
       </section>
+      )}
 
       <div id="back-form-modal" className="modal-overlay">
         <div className="modal-card">
