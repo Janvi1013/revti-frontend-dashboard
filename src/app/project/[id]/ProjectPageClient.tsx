@@ -494,6 +494,24 @@ export default function ProjectPageClient({
   }, [isMobileNavOpen]);
 
   useEffect(() => {
+    document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
+
+    const closeMobileNavOnDesktop = () => {
+      if (window.innerWidth > 768) {
+        setIsMobileNavOpen(false);
+      }
+    };
+
+    closeMobileNavOnDesktop();
+    window.addEventListener('resize', closeMobileNavOnDesktop);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('resize', closeMobileNavOnDesktop);
+    };
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
     if (!project) return;
     // 1. Reveal Observer
     const ro = new IntersectionObserver(e => e.forEach(en => {
