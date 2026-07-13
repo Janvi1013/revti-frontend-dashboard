@@ -72,6 +72,16 @@ export type Project = {
   impact?: string;
   compliance?: string;
   process?: unknown[] | string;
+  reelSection?: {
+    enabled?: boolean;
+    title?: string;
+    description?: string;
+    videoUrl?: string;
+    posterUrl?: string;
+    autoplay?: boolean;
+    muted?: boolean;
+    loop?: boolean;
+  };
   [key: string]: unknown;
 };
 
