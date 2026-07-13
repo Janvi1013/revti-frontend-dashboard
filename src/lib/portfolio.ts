@@ -57,9 +57,16 @@ export type SocialLink = {
   icon?: string;
 };
 
+export type ProjectFilter = {
+  id: string;
+  label: string;
+  slug: string;
+};
+
 export type WebsiteContent = {
   projects: PortfolioProject[];
   categories: string[];
+  categoryFilters: ProjectFilter[];
   heroContent: HomeHeroContent | null;
   contactContent: ContactSectionContent | null;
   impactMetrics: PortfolioImpactMetric[];
@@ -156,6 +163,64 @@ export const normalizeFilterSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+
+const formatFilterLabel = (value: string) => value.trim().replace(/\b\w/g, (char) => char.toUpperCase());
+
+const uniqueProjectFilters = (filters: ProjectFilter[]) => {
+  const filtersBySlug = new Map<string, ProjectFilter>();
+  const labelToSlug = new Map<string, string>();
+
+  filters.forEach((filter) => {
+    const slug = normalizeFilterSlug(filter.slug);
+    const label = filter.label.trim();
+    if (!slug || slug === 'all' || !label) return;
+
+    const normalizedLabel = normalizeFilterSlug(label);
+    const existingSlugForLabel = labelToSlug.get(normalizedLabel);
+    if (existingSlugForLabel && filtersBySlug.has(existingSlugForLabel)) return;
+    if (filtersBySlug.has(slug)) return;
+
+    filtersBySlug.set(slug, { id: filter.id || slug, label, slug });
+    labelToSlug.set(normalizedLabel, slug);
+  });
+
+  return Array.from(filtersBySlug.values());
+};
+
+export function getPrimaryProjectFilter(project: PortfolioProject): ProjectFilter | undefined {
+  const slug = normalizeFilterSlug(project.categorySlug || project.cat || project.category || '');
+  if (!slug || slug === 'all') return undefined;
+
+  return {
+    id: slug,
+    label: project.category?.trim() || formatFilterLabel(slug.replace(/-/g, ' ')),
+    slug,
+  };
+}
+
+export function buildVisibleProjectFilters(
+  projects: PortfolioProject[],
+  categoryFilters: ProjectFilter[] = []
+): ProjectFilter[] {
+  const filters = new Map<string, ProjectFilter>();
+  filters.set('all', { id: 'all', label: 'All Projects', slug: 'all' });
+
+  const canonicalCategoryFilters = uniqueProjectFilters(categoryFilters);
+
+  if (canonicalCategoryFilters.length > 0) {
+    canonicalCategoryFilters.forEach((filter) => filters.set(filter.slug, filter));
+    return Array.from(filters.values());
+  }
+
+  projects.forEach((project) => {
+    const filter = getPrimaryProjectFilter(project);
+    if (!filter || filters.has(filter.slug)) return;
+    filters.set(filter.slug, filter);
+  });
+
+  return Array.from(filters.values());
+}
+
 export function getProjectFilterSlugs(project: PortfolioProject): string[] {
   const rawValues = [
     project.cat,
@@ -194,6 +259,35 @@ export function getPublishedProjects(allProjects: PortfolioProject[]): Portfolio
       const sequenceB = Number(b.sequence ?? 0);
       return sequenceA - sequenceB;
     });
+}
+
+
+export function resolveProjectNavigationFilter(
+  allProjects: PortfolioProject[],
+  requestedFilter: string,
+  currentProjectId?: string | null
+) {
+  const normalizedRequestedFilter = normalizeFilterSlug(requestedFilter || 'all') || 'all';
+  const requestedProjects = normalizedRequestedFilter === 'all'
+    ? allProjects
+    : allProjects.filter((project) => projectMatchesFilter(project, normalizedRequestedFilter));
+  const currentExistsInRequestedProjects = Boolean(currentProjectId) && requestedProjects.some(
+    (item) => String(item.id) === String(currentProjectId)
+  );
+  const shouldFallbackToAll = normalizedRequestedFilter !== 'all' && (
+    requestedProjects.length === 0 ||
+    !currentExistsInRequestedProjects
+  );
+  const resolvedNavigationFilter = shouldFallbackToAll ? 'all' : normalizedRequestedFilter;
+
+  return {
+    requestedFilter: normalizedRequestedFilter,
+    requestedProjects,
+    currentExistsInRequestedProjects,
+    shouldFallbackToAll,
+    resolvedNavigationFilter,
+    navigationProjects: resolvedNavigationFilter === 'all' ? allProjects : requestedProjects,
+  };
 }
 
 export const fallbackPortfolioProjects: PortfolioProject[] = [
@@ -528,7 +622,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   if (!title) return null;
 
   const id = getStringValue(item, ['slug', 'id', '_id']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `portfolio-${index + 1}`;
-  const categorySlug = getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory']);
+  const categorySlug = getStringValue(item, ['category_slug', 'categorySlug', 'cat', 'category', 'type', 'portfolioCategory']);
   const category = categorySlug
     ? categorySlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     : 'Portfolio';
@@ -687,27 +781,48 @@ const normalizeImpactMetric = (item: any): PortfolioImpactMetric | null => {
 
 export const normalizePortfolioProjectsFromApi = (data: PortfolioApiData): PortfolioProject[] => {
   const categoryNames = new Map<string, string>();
+  const categorySlugs = new Map<string, string>();
   data.categories.forEach((category) => {
     const label = getCategoryLabel(category);
+    const slug = normalizeFilterSlug(getStringValue(category, ['slug', 'cat']));
     [getCategorySlug(category), getStringValue(category, ['id'])].filter(Boolean).forEach((key) => {
       if (label) categoryNames.set(key, label);
+      if (slug) categorySlugs.set(key, slug);
     });
   });
 
   return data.projects
     .filter(isPublishedProject)
     .sort((a: any, b: any) => (Number(a?.sequence) || 0) - (Number(b?.sequence) || 0))
-    .map((item, index) => normalizePortfolioProject({
-      ...item,
-      category_name: categoryNames.get(getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory'])) || item?.category_name,
-    }, index))
+    .map((item, index) => {
+      const rawCategoryKey = getStringValue(item, ['cat', 'category', 'type', 'portfolioCategory']);
+      return normalizePortfolioProject({
+        ...item,
+        category_name: categoryNames.get(rawCategoryKey) || item?.category_name,
+        category_slug: categorySlugs.get(rawCategoryKey) || item?.category_slug,
+      }, index);
+    })
     .filter((project): project is PortfolioProject => Boolean(project));
 };
 
-export const normalizePortfolioCategoriesFromApi = (data: PortfolioApiData): string[] => sortByDisplayOrder(data.categories as any[])
-  .filter(isActiveRecord)
-  .map(getCategoryLabel)
-  .filter(Boolean);
+export const normalizePortfolioCategoryFiltersFromApi = (data: PortfolioApiData): ProjectFilter[] => uniqueProjectFilters(
+  sortByDisplayOrder(data.categories as any[])
+    .filter(isActiveRecord)
+    .map((category: ProjectCategory) => {
+      const label = getCategoryLabel(category);
+      const slug = normalizeFilterSlug(getStringValue(category, ['slug', 'cat']));
+      if (!label || !slug || slug === 'all') return undefined;
+      return {
+        id: getStringValue(category, ['id']) || slug,
+        label,
+        slug,
+      };
+    })
+    .filter((filter): filter is ProjectFilter => Boolean(filter))
+);
+
+export const normalizePortfolioCategoriesFromApi = (data: PortfolioApiData): string[] => normalizePortfolioCategoryFiltersFromApi(data)
+  .map((filter) => filter.label);
 
 export const normalizeImpactMetricsFromApi = (data: PortfolioApiData): PortfolioImpactMetric[] => sortByDisplayOrder(data.impactNumbers as any[])
   .filter(isActiveRecord)
@@ -742,19 +857,26 @@ export const normalizeSocialLinksFromApi = (data: PortfolioApiData): SocialLink[
   }))
   .filter(link => link.id && link.platform && link.href);
 
-export const normalizeWebsiteContentFromApi = (data: PortfolioApiData): WebsiteContent => ({
-  projects: normalizePortfolioProjectsFromApi(data),
-  categories: normalizePortfolioCategoriesFromApi(data),
-  heroContent: normalizeHeroContent((data.siteSettings as any)?.hero_section),
-  contactContent: normalizeContactContent((data.siteSettings as any)?.contact_section),
-  impactMetrics: normalizeImpactMetricsFromApi(data),
-  clientLogos: normalizeClientLogosFromApi(data),
-  socialLinks: normalizeSocialLinksFromApi(data),
-});
+export const normalizeWebsiteContentFromApi = (data: PortfolioApiData): WebsiteContent => {
+  const projects = normalizePortfolioProjectsFromApi(data);
+  const categoryFilters = normalizePortfolioCategoryFiltersFromApi(data);
+
+  return {
+    projects,
+    categories: categoryFilters.map((filter) => filter.label),
+    categoryFilters: categoryFilters.length ? categoryFilters : buildVisibleProjectFilters(projects),
+    heroContent: normalizeHeroContent((data.siteSettings as any)?.hero_section),
+    contactContent: normalizeContactContent((data.siteSettings as any)?.contact_section),
+    impactMetrics: normalizeImpactMetricsFromApi(data),
+    clientLogos: normalizeClientLogosFromApi(data),
+    socialLinks: normalizeSocialLinksFromApi(data),
+  };
+};
 
 const fallbackWebsiteContent: WebsiteContent = {
   projects: fallbackPortfolioProjects,
   categories: ['Branding', 'Websites', 'Events', 'Publication', 'Interiors', 'Packaging'],
+  categoryFilters: buildVisibleProjectFilters(fallbackPortfolioProjects),
   heroContent: fallbackHomeHeroContent,
   contactContent: fallbackContactSectionContent,
   impactMetrics: fallbackImpactMetrics,

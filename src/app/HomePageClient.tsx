@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { submitEnquiry } from '@/lib/actions';
 import {
-  getProjectFilterSlugs,
+  buildVisibleProjectFilters,
+  getPrimaryProjectFilter,
   loadWebsiteContent,
   normalizeFilterSlug,
   projectMatchesFilter,
@@ -14,46 +15,10 @@ import {
   type HomeHeroContent,
   type PortfolioImpactMetric,
   type PortfolioProject,
+  type ProjectFilter,
   type SocialLink,
   type WebsiteContent
 } from '@/lib/portfolio';
-
-
-
-type ProjectFilter = {
-  id: string;
-  label: string;
-  slug: string;
-};
-
-const formatFilterLabel = (value: string) => value.trim().replace(/\b\w/g, (char) => char.toUpperCase());
-
-const getProjectPrimaryFilter = (project: PortfolioProject) => getProjectFilterSlugs(project)[0] || normalizeFilterSlug(project.category || '');
-
-const buildProjectFilters = (projects: PortfolioProject[], backendCategories: string[]): ProjectFilter[] => {
-  const filters = new Map<string, ProjectFilter>();
-  filters.set('all', { id: 'all', label: 'All Projects', slug: 'all' });
-
-  backendCategories
-    .map(value => value?.trim())
-    .filter((value): value is string => Boolean(value))
-    .forEach((label) => {
-      const slug = normalizeFilterSlug(label);
-      if (!slug || slug === 'all' || filters.has(slug)) return;
-      filters.set(slug, { id: slug, label, slug });
-    });
-
-  projects.forEach((project) => {
-    const slugs = getProjectFilterSlugs(project);
-    slugs.forEach((slug, index) => {
-      if (!slug || slug === 'all' || filters.has(slug)) return;
-      const label = index === 0 && project.category ? project.category : formatFilterLabel(slug.replace(/-/g, ' '));
-      filters.set(slug, { id: slug, label, slug });
-    });
-  });
-
-  return Array.from(filters.values());
-};
 
 const getInitialProjectFilter = () => {
   if (typeof window === 'undefined') return 'all';
@@ -85,14 +50,14 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   const [activeProjectFilter, setActiveProjectFilter] = useState(getInitialProjectFilter);
   const filterButtonRefs = useRef(new Map<string, HTMLButtonElement>());
 
-  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(initialContent.categories.length ? initialContent.categories : Array.from(new Set(initialContent.projects.map(p => p.category).filter(Boolean))));
+  const [portfolioCategoryFilters, setPortfolioCategoryFilters] = useState<ProjectFilter[]>(initialContent.categoryFilters || []);
   const [contentError, setContentError] = useState<string | null>(null);
   const [isContentLoading, setIsContentLoading] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const availableProjectFilters = useMemo(
-    () => buildProjectFilters(portfolioProjects, portfolioCategories),
-    [portfolioProjects, portfolioCategories]
+    () => buildVisibleProjectFilters(portfolioProjects, portfolioCategoryFilters),
+    [portfolioProjects, portfolioCategoryFilters]
   );
 
   const activeFilterIsValid = availableProjectFilters.some(filter => filter.slug === activeProjectFilter);
@@ -174,7 +139,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
         if (!active || controller.signal.aborted) return;
 
         setPortfolioProjects(result.content.projects);
-        setPortfolioCategories(Array.from(new Set(result.content.categories.filter(Boolean))));
+        setPortfolioCategoryFilters(result.content.categoryFilters || []);
         setHeroContent(result.content.heroContent);
         setContactContent(result.content.contactContent);
         setImpactMetrics(result.content.impactMetrics);
@@ -550,7 +515,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
         <Link
           href={`/project/${project.id}?filter=${encodeURIComponent(resolvedProjectFilter)}`}
           className="project-card home-project-grid-item"
-          data-category={getProjectPrimaryFilter(project)}
+          data-category={getPrimaryProjectFilter(project)?.slug || normalizeFilterSlug(project.category || '')}
           key={project.id}
           aria-label={`View project details for ${project.title}`}
           style={{ '--project-card-index': index } as React.CSSProperties}
