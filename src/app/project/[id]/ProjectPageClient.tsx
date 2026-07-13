@@ -33,6 +33,39 @@ const isEditableKeyTarget = (target: EventTarget | null) => (
   Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
 );
 
+const toFilterKey = (value?: string | null) => (value || 'all').trim().toLowerCase().replace(/\s+/g, '-');
+
+const projectMatchesFilter = (project: PortfolioProject, filter: string) => {
+  const filterKey = toFilterKey(filter);
+  if (filterKey === 'all') return true;
+
+  return [
+    project.category,
+    ...project.tags,
+  ].some(value => toFilterKey(value) === filterKey);
+};
+
+const getUniqueProjects = (items: PortfolioProject[]) => {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (!item.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
+const getProjectHref = (projectId: string, filter: string) => `/project/${projectId}?filter=${encodeURIComponent(filter || 'all')}`;
+
+const isInteractiveSwipeTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('video, button, a, input, textarea, select, [role="button"], [contenteditable="true"], [data-disable-project-swipe]'))
+);
+
+const isEditableKeyTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
+);
+
 export default function ProjectPageClient({
   initialProjects,
   initialProject,
