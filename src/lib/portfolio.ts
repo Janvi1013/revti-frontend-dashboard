@@ -112,6 +112,7 @@ export type PortfolioProject = {
   id: string;
   title: string;
   category: string;
+  categorySlug?: string;
   year?: string;
   client?: string;
   tagline?: string;
@@ -132,6 +133,8 @@ export type PortfolioProject = {
   compliance?: string;
   process: PortfolioProcessStep[];
   feedback: PortfolioFeedback[];
+  status?: string;
+  sequence?: number;
   sectionVisibility?: ProjectSectionVisibility;
   clientLogo?: string;
   videoType?: string;
@@ -139,6 +142,27 @@ export type PortfolioProject = {
   reelSection?: ProjectReelSection;
   icon?: string;
   placeholderGradient?: string;
+};
+
+export const normalizeFilterSlug = (value?: string | null) => (value || 'all')
+  .trim()
+  .toLowerCase()
+  .replace(/&/g, 'and')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'all';
+
+export const getProjectFilterSlugs = (project: PortfolioProject) => Array.from(new Set([
+  project.categorySlug,
+  project.category,
+]
+  .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+  .map(normalizeFilterSlug)
+  .filter(Boolean)));
+
+export const projectMatchesFilter = (project: PortfolioProject, activeFilter: string) => {
+  const filterSlug = normalizeFilterSlug(activeFilter);
+  if (filterSlug === 'all') return true;
+  return getProjectFilterSlugs(project).includes(filterSlug);
 };
 
 export const fallbackPortfolioProjects: PortfolioProject[] = [
@@ -500,6 +524,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     id,
     title,
     category: categoryName || category,
+    categorySlug: normalizeFilterSlug(categorySlug || categoryName || category),
     year: getStringValue(item, ['year']),
     client: getStringValue(item, ['client', 'clientName']),
     tagline: getStringValue(item, ['tagline']),
@@ -534,6 +559,8 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
       role: getStringValue(f, ['role', 'designation', 'title']),
       text: getStringValue(f, ['text', 'quote', 'feedback']),
     })).filter(f => f.name || f.text),
+    status: getStringValue(item, ['status']) || 'published',
+    sequence: getNumberValue(item, ['sequence', 'display_order', 'displayOrder']) ?? index,
     sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     videoType: getStringValue(item, ['video_type', 'videoType']),

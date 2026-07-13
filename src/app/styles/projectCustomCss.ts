@@ -1952,4 +1952,11 @@ export const projectCustomCss = `
     }
   }
 
+  /* Ensure project navigation arrows stay clickable above project content. */
+  .project-navigation-arrow {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 100;
+  }
+
 `;

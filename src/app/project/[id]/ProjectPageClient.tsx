@@ -4,7 +4,34 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
+import {
+  fallbackPortfolioProjects,
+  loadWebsiteContent,
+  normalizeFilterSlug,
+  projectMatchesFilter,
+  type PortfolioProject
+} from '@/lib/portfolio';
+
+const getUniqueProjects = (items: PortfolioProject[]) => {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (!item.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
+const getProjectHref = (projectId: string, filter: string) => `/project/${projectId}?filter=${encodeURIComponent(filter || 'all')}`;
+
+const isInteractiveSwipeTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('video, button, a, input, textarea, select, [role="button"], [contenteditable="true"], [data-disable-project-swipe]'))
+);
+
+const isEditableKeyTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
+);
 
 const toFilterKey = (value?: string | null) => (value || 'all').trim().toLowerCase().replace(/\s+/g, '-');
 
@@ -61,33 +88,47 @@ export default function ProjectPageClient({
   const [isProjectNavigating, setIsProjectNavigating] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; enabled: boolean }>({ x: 0, y: 0, enabled: false });
 
-  const requestedFilter = searchParams.get('filter') || 'all';
-  const allProjects = useMemo(() => getUniqueProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
-  const validFilterKeys = useMemo(
-    () => new Set(['all', ...allProjects.flatMap(item => [item.category, ...item.tags].map(toFilterKey))]),
-    [allProjects]
+  const rawFilter = searchParams.get('filter')?.trim() || 'all';
+  const activeFilter = normalizeFilterSlug(rawFilter);
+  const publishedProjects = useMemo(() => getUniqueProjects(projects.length ? projects : fallbackPortfolioProjects)
+    .filter(item => item.id && (!item.status || item.status === 'published'))
+    .sort((a, b) => Number(a.sequence ?? 0) - Number(b.sequence ?? 0)), [projects]);
+  const requestedProjects = useMemo(
+    () => activeFilter === 'all'
+      ? publishedProjects
+      : publishedProjects.filter(item => projectMatchesFilter(item, activeFilter)),
+    [activeFilter, publishedProjects]
   );
-  const activeFilter = validFilterKeys.has(toFilterKey(requestedFilter)) ? requestedFilter : 'all';
-  const activeFilterKey = toFilterKey(activeFilter);
-  const matchingProjects = useMemo(
-    () => activeFilterKey === 'all' ? allProjects : allProjects.filter(item => projectMatchesFilter(item, activeFilterKey)),
-    [activeFilterKey, allProjects]
-  );
+  const currentExistsInRequested = Boolean(project && requestedProjects.some(item => String(item.id) === String(project.id)));
   const navigationProjects = useMemo(
-    () => project && matchingProjects.some(item => item.id === project.id) ? matchingProjects : allProjects,
-    [allProjects, matchingProjects, project]
+    () => requestedProjects.length > 0 && currentExistsInRequested ? requestedProjects : publishedProjects,
+    [currentExistsInRequested, publishedProjects, requestedProjects]
   );
+  const navigationFilter = currentExistsInRequested ? activeFilter : 'all';
   const projectNavigation = useMemo(() => {
-    if (!project || navigationProjects.length <= 1) return null;
-    const currentIndex = navigationProjects.findIndex(item => item.id === project.id);
-    if (currentIndex === -1) return null;
+    if (!project) return null;
+    const currentIndex = navigationProjects.findIndex(item => String(item.id) === String(project.id));
+    const canNavigate = currentIndex >= 0 && navigationProjects.length > 1;
+    if (!canNavigate) return null;
 
     return {
       previous: navigationProjects[(currentIndex - 1 + navigationProjects.length) % navigationProjects.length],
       next: navigationProjects[(currentIndex + 1) % navigationProjects.length],
-      filter: navigationProjects === matchingProjects ? activeFilter : 'all',
+      currentIndex,
+      filter: navigationFilter,
     };
-  }, [activeFilter, matchingProjects, navigationProjects, project]);
+  }, [navigationFilter, navigationProjects, project]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log('Active filter:', activeFilter);
+    console.log('Published IDs:', publishedProjects.map((item) => item.id));
+    console.log('Filtered IDs:', requestedProjects.map((item) => item.id));
+    console.log('Navigation IDs:', navigationProjects.map((item) => item.id));
+    console.log('Current index:', projectNavigation?.currentIndex ?? -1);
+    console.log('Previous ID:', projectNavigation?.previous?.id);
+    console.log('Next ID:', projectNavigation?.next?.id);
+  }, [activeFilter, navigationProjects, projectNavigation, publishedProjects, requestedProjects]);
 
   const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
     if (!targetProject || isProjectNavigating) return;
@@ -99,8 +140,8 @@ export default function ProjectPageClient({
     modal?.classList.remove('open');
     document.body.style.overflow = '';
 
-    router.push(getProjectHref(targetProject.id, projectNavigation?.filter || 'all'), { scroll: true });
-  }, [isProjectNavigating, projectNavigation?.filter, router]);
+    router.push(getProjectHref(targetProject.id, projectNavigation?.filter || activeFilter || 'all'), { scroll: true });
+  }, [activeFilter, isProjectNavigating, projectNavigation?.filter, router]);
 
   const goToPreviousProject = useCallback(() => navigateToProject(projectNavigation?.previous), [navigateToProject, projectNavigation?.previous]);
   const goToNextProject = useCallback(() => navigateToProject(projectNavigation?.next), [navigateToProject, projectNavigation?.next]);

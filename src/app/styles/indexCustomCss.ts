@@ -2867,4 +2867,103 @@ export const indexCustomCss = `
   }
 }
 
+
+/* Minimal portfolio filter bar override: text-only active state, no filled box. */
+.portfolio-section .portfolio-filter-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(18px, 2.5vw, 40px);
+  width: min(100%, 960px);
+  max-width: 100%;
+  margin: 0 auto clamp(38px, 5vw, 66px);
+  padding: 18px 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  background: transparent !important;
+}
+
+.portfolio-section .portfolio-filter-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.portfolio-section .portfolio-filter-button,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button.active,
+.portfolio-section .portfolio-filter-nav .portfolio-filter-button.is-active {
+  position: relative;
+  flex: 0 0 auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 10px 0 14px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,.55) !important;
+  font-family: var(--font);
+  font-size: clamp(12px, 1vw, 15px);
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+.portfolio-section .portfolio-filter-button::before {
+  display: none !important;
+}
+
+.portfolio-section .portfolio-filter-button::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 1;
+  transform: translateX(-50%);
+  transition: width 260ms ease;
+}
+
+.portfolio-section .portfolio-filter-button:hover,
+.portfolio-section .portfolio-filter-button:focus-visible {
+  color: rgba(255,255,255,.92) !important;
+  transform: translateY(-1px);
+}
+
+.portfolio-section .portfolio-filter-button.is-active,
+.portfolio-section .portfolio-filter-button.active {
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.portfolio-section .portfolio-filter-button.is-active::after,
+.portfolio-section .portfolio-filter-button.active::after {
+  width: 100%;
+}
+
+.portfolio-section .portfolio-filter-button:focus-visible {
+  outline: 1px solid rgba(255,255,255,.5);
+  outline-offset: 8px;
+  border-radius: 999px !important;
+}
+
+@media (max-width: 767px) {
+  .portfolio-section .portfolio-filter-nav {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    width: calc(100% + 40px);
+    max-width: none;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-inline: 20px;
+    scroll-padding-inline: 20px;
+  }
+}
+
 `;
