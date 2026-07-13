@@ -2790,6 +2790,26 @@ export const indexCustomCss = `
   }
 }
 
+@media (max-width: 1024px) {
+  .portfolio-section .portfolio-filter-nav {
+    justify-content: flex-start;
+    min-width: max-content;
+    padding-inline: 16px;
+    gap: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .portfolio-section .portfolio-filter-nav {
+    gap: 18px;
+    padding-inline: 12px;
+  }
+
+  .portfolio-section .portfolio-filter-button {
+    font-size: 12px;
+  }
+}
+
 .portfolio-section .home-project-grid {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 360px)) !important;
