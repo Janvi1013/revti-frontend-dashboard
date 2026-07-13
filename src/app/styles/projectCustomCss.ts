@@ -1534,6 +1534,7 @@ export const projectCustomCss = `
     background: transparent;
     color: rgba(255,255,255,.72);
     pointer-events: auto;
+    z-index: 100;
     cursor: pointer !important;
     transition: color .25s ease, opacity .25s ease, transform .25s ease;
   }
