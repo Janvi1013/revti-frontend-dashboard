@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { submitEnquiry } from '@/lib/actions';
 import {
   loadWebsiteContent,
@@ -13,6 +14,52 @@ import {
   type WebsiteContent
 } from '@/lib/portfolio';
 
+
+
+type ProjectFilter = {
+  id: string;
+  label: string;
+  slug: string;
+};
+
+const normalizeFilterSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const getProjectFilterSlugs = (project: PortfolioProject) => {
+  const values = [project.category].filter((value): value is string => Boolean(value?.trim()));
+  return Array.from(new Set(values.map(normalizeFilterSlug).filter(Boolean)));
+};
+
+const projectMatchesFilter = (project: PortfolioProject, activeFilter: string) => {
+  if (activeFilter === 'all') return true;
+  return getProjectFilterSlugs(project).includes(activeFilter);
+};
+
+const buildProjectFilters = (projects: PortfolioProject[], backendCategories: string[]): ProjectFilter[] => {
+  const filters = new Map<string, ProjectFilter>();
+  filters.set('all', { id: 'all', label: 'All projects', slug: 'all' });
+
+  [...backendCategories, ...projects.map(project => project.category)]
+    .map(value => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .forEach((label) => {
+      const slug = normalizeFilterSlug(label);
+      if (!slug || filters.has(slug)) return;
+      filters.set(slug, { id: slug, label, slug });
+    });
+
+  return Array.from(filters.values());
+};
+
+const getInitialProjectFilter = () => {
+  if (typeof window === 'undefined') return 'all';
+  return normalizeFilterSlug(new URLSearchParams(window.location.search).get('filter') || 'all') || 'all';
+};
 
 const renderHighlightedText = (title: string, highlight: string) => {
   if (!highlight) return title;
@@ -36,10 +83,72 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   const [contactContent, setContactContent] = useState<ContactSectionContent | null>(initialContent.contactContent);
   const [clientLogos, setClientLogos] = useState<ClientLogo[]>(initialContent.clientLogos);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialContent.socialLinks);
+  const [activeProjectFilter, setActiveProjectFilter] = useState(getInitialProjectFilter);
+  const filterMenuRef = useRef<HTMLElement | null>(null);
 
-  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(['all', ...Array.from(new Set(initialContent.projects.map(p => p.category).filter(Boolean)))]);
+  const [portfolioCategories, setPortfolioCategories] = useState<string[]>(initialContent.categories.length ? initialContent.categories : Array.from(new Set(initialContent.projects.map(p => p.category).filter(Boolean))));
   const [contentError, setContentError] = useState<string | null>(null);
   const [isContentLoading, setIsContentLoading] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const availableProjectFilters = useMemo(
+    () => buildProjectFilters(portfolioProjects, portfolioCategories),
+    [portfolioProjects, portfolioCategories]
+  );
+
+  const activeFilterIsValid = availableProjectFilters.some(filter => filter.slug === activeProjectFilter);
+  const resolvedProjectFilter = activeFilterIsValid ? activeProjectFilter : 'all';
+  const activeProjectFilterLabel = availableProjectFilters.find(filter => filter.slug === resolvedProjectFilter)?.label || 'All projects';
+
+  const filteredProjects = useMemo(
+    () => portfolioProjects.filter(project => projectMatchesFilter(project, resolvedProjectFilter)),
+    [portfolioProjects, resolvedProjectFilter]
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updateMotionPreference();
+    mediaQuery.addEventListener('change', updateMotionPreference);
+    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    if (!activeFilterIsValid && activeProjectFilter !== 'all') {
+      setActiveProjectFilter('all');
+    }
+  }, [activeFilterIsValid, activeProjectFilter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('filter') === resolvedProjectFilter) return;
+    searchParams.set('filter', resolvedProjectFilter);
+    const nextQuery = searchParams.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
+  }, [resolvedProjectFilter]);
+
+  const handleProjectFilterChange = useCallback((nextFilter: string) => {
+    const nextSlug = normalizeFilterSlug(nextFilter) || 'all';
+    const updateFilter = () => setActiveProjectFilter(nextSlug);
+
+    if (!prefersReducedMotion && typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as Document & { startViewTransition: (callback: () => void) => void }).startViewTransition(() => {
+        flushSync(updateFilter);
+      });
+    } else {
+      updateFilter();
+    }
+
+    window.requestAnimationFrame(() => {
+      const activeButton = filterMenuRef.current?.querySelector<HTMLButtonElement>(`[data-filter="${CSS.escape(nextSlug)}"]`);
+      activeButton?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    });
+  }, [prefersReducedMotion]);
 
   useEffect(() => {
     let active = true;
@@ -271,66 +380,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       });
     }
 
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const projectCards = document.querySelectorAll<HTMLAnchorElement>('.project-card');
-    let activeCategoryFilter = 'all';
-
-    const getProjectIdFromHref = (href: string) => {
-      const projectPath = '/project/';
-      const pathStart = href.indexOf(projectPath);
-      if (pathStart === -1) return '';
-      return href.slice(pathStart + projectPath.length).split(/[?#/]/)[0];
-    };
-
-    const syncProjectSequence = (selectedFilter: string) => {
-      const projectIds = Array.from(projectCards)
-        .filter(card => selectedFilter === 'all' || card.getAttribute('data-category') === selectedFilter)
-        .map(card => getProjectIdFromHref(card.getAttribute('href') || ''))
-        .filter((projectId, index, ids) => projectId && ids.indexOf(projectId) === index);
-
-      sessionStorage.setItem('activeCategoryFilter', selectedFilter);
-      sessionStorage.setItem('activeProjectSequence', JSON.stringify(projectIds));
-    };
-
-    syncProjectSequence(activeCategoryFilter);
-
-    filterButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        filterButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-
-        const selectedFilter = button.getAttribute('data-filter') || 'all';
-        activeCategoryFilter = selectedFilter;
-        syncProjectSequence(selectedFilter);
-
-        projectCards.forEach(card => {
-          card.classList.add('fade-out');
-        });
-
-        setTimeout(() => {
-          projectCards.forEach(card => {
-            const cardCategory = card.getAttribute('data-category');
-            if (selectedFilter === 'all' || cardCategory === selectedFilter) {
-              card.classList.remove('hide');
-              setTimeout(() => {
-                card.classList.remove('fade-out');
-              }, 20);
-            } else {
-              card.classList.add('hide');
-            }
-          });
-        }, 400);
-      });
-    });
-
-    projectCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const cardCategory = card.getAttribute('data-category') || 'all';
-        const sequenceFilter = activeCategoryFilter === 'all' ? 'all' : cardCategory;
-        syncProjectSequence(sequenceFilter);
-      });
-    });
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -424,8 +473,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       {impactMetrics.map((metric, index) => (
         <div className="impact-item rv" style={{ transitionDelay: `${index * 0.1}s` }} key={metric.label}>
           <span className="impact-num counter" data-t={metric.value} data-s={metric.suffix}>{metric.displayValue}</span>
-          <div className="impact-label">{metric.label}</div>
-          <div className="impact-sub">{metric.sub}</div>
+          {metric.label && <div className="impact-label">{metric.label}</div>}
+          {metric.sub && <div className="impact-sub">{metric.sub}</div>}
         </div>
       ))}
       {impactMetrics.length === 0 && !isContentLoading && <div className="impact-item rv"><span className="impact-label">No impact numbers available.</span></div>}
@@ -443,27 +492,41 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     </div>
 
     {/* Filter Buttons */}
-    <div className="filter-menu rv">
-      {portfolioCategories.map((category) => (
+    <nav className="filter-menu home-project-filters rv" aria-label="Filter projects" ref={filterMenuRef}>
+      {availableProjectFilters.map((filter) => (
         <button
-          className={`filter-btn ${category === 'all' ? 'active' : ''}`}
-          data-filter={category}
-          key={category}
+          type="button"
+          className={`filter-btn home-project-filter ${resolvedProjectFilter === filter.slug ? 'active is-active' : ''}`}
+          data-filter={filter.slug}
+          key={filter.slug}
+          onClick={() => handleProjectFilterChange(filter.slug)}
+          aria-pressed={resolvedProjectFilter === filter.slug}
         >
-          {category === 'all' ? 'All projects' : category}
+          {filter.label}
         </button>
       ))}
+    </nav>
+
+    <div className="sr-only home-project-results-status" aria-live="polite">
+      {`${filteredProjects.length} projects shown for ${activeProjectFilterLabel}`}
     </div>
 
-    <div className="project-grid" id="projectGrid">
-      {portfolioProjects.length === 0 && !isContentLoading && <div className="project-empty-state">No published projects available.</div>}
-      {portfolioProjects.map((project) => (
+    <div className="project-grid home-project-grid" id="projectGrid">
+      {portfolioProjects.length === 0 && !isContentLoading && <div className="project-empty-state home-project-empty-state">No published projects available.</div>}
+      {portfolioProjects.length > 0 && filteredProjects.length === 0 && !isContentLoading && (
+        <div className="project-empty-state home-project-empty-state">
+          <p>No projects are available in this category yet.</p>
+          <button type="button" className="home-project-empty-action" onClick={() => handleProjectFilterChange('all')}>View all projects</button>
+        </div>
+      )}
+      {filteredProjects.map((project, index) => (
         <a
-          href={`/project/${project.id}`}
-          className="project-card"
-          data-category={project.category}
+          href={`/project/${project.id}?filter=${encodeURIComponent(resolvedProjectFilter)}`}
+          className="project-card home-project-grid-item"
+          data-category={getProjectFilterSlugs(project).join(' ')}
           key={project.id}
           aria-label={`View project details for ${project.title}`}
+          style={{ '--project-card-index': index } as React.CSSProperties}
         >
           <div className="card-visual">
             <div className="card-image-wrapper">
@@ -474,19 +537,23 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
                   <span className="placeholder-icon">{project.icon || '✨'}</span>
                 </div>
               )}
-              <div className="card-overlay">
-                <div className="overlay-content">
-                  <span className="overlay-category">{project.category}</span>
+              {project.category && (
+                <div className="card-overlay">
+                  <div className="overlay-content">
+                    <span className="overlay-category">{project.category}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="card-info">
             <h3 className="card-title">{project.title}</h3>
             <div className="meta-container">
-              <div className="card-tags">
-                {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
-              </div>
+              {project.tags.length > 0 && (
+                <div className="card-tags">
+                  {project.tags.map(tag => <span className="tag" key={`${project.id}-${tag}`}>{tag}</span>)}
+                </div>
+              )}
               <div className="show-project-view">Show Project</div>
             </div>
           </div>
@@ -502,7 +569,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     <span className="logo-carousel-eyebrow">Trusted Collaborations</span>
     <h2 className="logo-carousel-title" id="logo-carousel-title">Brands that trust our creative process</h2>
   </div>
-  <div className="logo-carousel" aria-label="Client logo carousel">
+  <div className={`logo-carousel${clientLogos.length > 1 ? ' is-marquee' : ' is-static'}`} aria-label="Client logo carousel">
     <div className="logo-carousel-track">
       {clientLogos.length === 0 && !isContentLoading && <div className="client-logo-card"><span>No client logos available.</span></div>}
       {clientLogos.map((logo) => (
@@ -510,11 +577,13 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
           {logo.image ? <img src={logo.image} alt={logo.name} loading="lazy" /> : <span>{logo.name}</span>}
         </div>
       ))}
-      {clientLogos.map((logo) => (
-        <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
-          {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
-        </div>
-      ))}
+      {clientLogos.length > 1 && (
+        clientLogos.map((logo) => (
+          <div className="client-logo-card" key={`logo-b-${logo.id}`} aria-hidden="true">
+            {logo.image ? <img src={logo.image} alt="" loading="lazy" /> : <span>{logo.name}</span>}
+          </div>
+        ))
+      )}
     </div>
   </div>
 </section>
