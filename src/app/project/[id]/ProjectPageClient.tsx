@@ -1,9 +1,43 @@
 'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
 import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
+
+const toFilterKey = (value?: string | null) => (value || 'all').trim().toLowerCase().replace(/\s+/g, '-');
+
+const projectMatchesFilter = (project: PortfolioProject, filter: string) => {
+  const filterKey = toFilterKey(filter);
+  if (filterKey === 'all') return true;
+
+  return [
+    project.category,
+    ...project.tags,
+  ].some(value => toFilterKey(value) === filterKey);
+};
+
+const getUniqueProjects = (items: PortfolioProject[]) => {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (!item.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
+const getProjectHref = (projectId: string, filter: string) => `/project/${projectId}?filter=${encodeURIComponent(filter || 'all')}`;
+
+const isInteractiveSwipeTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('video, button, a, input, textarea, select, [role="button"], [contenteditable="true"], [data-disable-project-swipe]'))
+);
+
+const isEditableKeyTarget = (target: EventTarget | null) => (
+  target instanceof Element &&
+  Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
+);
 
 export default function ProjectPageClient({
   initialProjects,
@@ -15,19 +49,66 @@ export default function ProjectPageClient({
   id: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<PortfolioProject[]>(initialProjects);
   const [project, setProject] = useState<PortfolioProject | null>(initialProject);
   
-  const [prevId, setPrevId] = useState('');
-  const [nextId, setNextId] = useState('');
   const [projectNotFound, setProjectNotFound] = useState(initialProject === null);
   const [isProjectLoading, setIsProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isProjectNavigating, setIsProjectNavigating] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number; enabled: boolean }>({ x: 0, y: 0, enabled: false });
+
+  const requestedFilter = searchParams.get('filter') || 'all';
+  const allProjects = useMemo(() => getUniqueProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
+  const validFilterKeys = useMemo(
+    () => new Set(['all', ...allProjects.flatMap(item => [item.category, ...item.tags].map(toFilterKey))]),
+    [allProjects]
+  );
+  const activeFilter = validFilterKeys.has(toFilterKey(requestedFilter)) ? requestedFilter : 'all';
+  const activeFilterKey = toFilterKey(activeFilter);
+  const matchingProjects = useMemo(
+    () => activeFilterKey === 'all' ? allProjects : allProjects.filter(item => projectMatchesFilter(item, activeFilterKey)),
+    [activeFilterKey, allProjects]
+  );
+  const navigationProjects = useMemo(
+    () => project && matchingProjects.some(item => item.id === project.id) ? matchingProjects : allProjects,
+    [allProjects, matchingProjects, project]
+  );
+  const projectNavigation = useMemo(() => {
+    if (!project || navigationProjects.length <= 1) return null;
+    const currentIndex = navigationProjects.findIndex(item => item.id === project.id);
+    if (currentIndex === -1) return null;
+
+    return {
+      previous: navigationProjects[(currentIndex - 1 + navigationProjects.length) % navigationProjects.length],
+      next: navigationProjects[(currentIndex + 1) % navigationProjects.length],
+      filter: navigationProjects === matchingProjects ? activeFilter : 'all',
+    };
+  }, [activeFilter, matchingProjects, navigationProjects, project]);
+
+  const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
+    if (!targetProject || isProjectNavigating) return;
+
+    setIsProjectNavigating(true);
+    setIsMobileNavOpen(false);
+    document.querySelectorAll('video').forEach(video => video.pause());
+    const modal = document.getElementById('back-form-modal');
+    modal?.classList.remove('open');
+    document.body.style.overflow = '';
+
+    router.push(getProjectHref(targetProject.id, projectNavigation?.filter || 'all'), { scroll: true });
+  }, [isProjectNavigating, projectNavigation?.filter, router]);
+
+  const goToPreviousProject = useCallback(() => navigateToProject(projectNavigation?.previous), [navigateToProject, projectNavigation?.previous]);
+  const goToNextProject = useCallback(() => navigateToProject(projectNavigation?.next), [navigateToProject, projectNavigation?.next]);
 
   useEffect(() => {
     let active = true;
     let abortController: AbortController | null = null;
+    setIsProjectNavigating(false);
 
     // Immediately try to find project in existing projects array or fallbacks to prevent flash of loading screen
     const foundProject = projects.find(item => item.id === id) || fallbackPortfolioProjects.find(item => item.id === id) || null;
@@ -144,46 +225,7 @@ export default function ProjectPageClient({
       }
     }
 
-    // 2. Dynamic Prev / Next Navigation setup (Filtered by category)
-    const activeFilter = sessionStorage.getItem('activeCategoryFilter') || 'all';
-    const categorySequences = projects.reduce<Record<string, string[]>>((acc, item) => {
-      acc.all.push(item.id);
-      acc[item.category] = [...(acc[item.category] || []), item.id];
-      return acc;
-    }, { all: [] });
-
-    let storedSequence: string[] = [];
-    try {
-      const parsedSequence = JSON.parse(sessionStorage.getItem('activeProjectSequence') || '[]');
-      if (Array.isArray(parsedSequence)) {
-        storedSequence = parsedSequence.filter((projectId): projectId is string => typeof projectId === 'string' && Boolean(projectId));
-      }
-    } catch {
-      storedSequence = [];
-    }
-
-    let filteredSequence = storedSequence.includes(id)
-      ? storedSequence
-      : categorySequences[activeFilter] || categorySequences['all'];
-
-    if (!filteredSequence.includes(id) || filteredSequence.length === 0) {
-      filteredSequence = categorySequences['all'];
-    }
-
-    const currentProjectIndex = filteredSequence.indexOf(id);
-    const prevProjId = filteredSequence[(currentProjectIndex - 1 + filteredSequence.length) % filteredSequence.length];
-    const nextProjId = filteredSequence[(currentProjectIndex + 1) % filteredSequence.length];
-    setPrevId(prevProjId);
-    setNextId(nextProjId);
-
-    const projectPrev = document.getElementById('projectPrev') as HTMLAnchorElement;
-    const projectNext = document.getElementById('projectNext') as HTMLAnchorElement;
-    if (projectPrev && projectNext) {
-      projectPrev.href = '/project/' + prevProjId;
-      projectNext.href = '/project/' + nextProjId;
-    }
-
-    // 3. Custom Cursor
+    // 2. Custom Cursor
     const curDot = document.getElementById('cur-dot');
     const curRing = document.getElementById('cur-ring');
     let mx = window.innerWidth / 2, my = window.innerHeight / 2;
@@ -240,28 +282,6 @@ export default function ProjectPageClient({
       }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // 5. Hamburger
-    const hamB = document.getElementById('ham');
-    const mob = document.getElementById('mob');
-    const handleHamClick = () => {
-      if (hamB && mob) {
-        hamB.classList.toggle('open');
-        mob.classList.toggle('open');
-        document.body.style.overflow = mob.classList.contains('open') ? 'hidden' : '';
-      }
-    };
-    if (hamB) hamB.addEventListener('click', handleHamClick);
-
-    const mobLinks = mob ? mob.querySelectorAll('a') : [];
-    const handleMobLinkClick = () => {
-      if (hamB && mob) {
-        hamB.classList.remove('open');
-        mob.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    };
-    mobLinks.forEach(a => a.addEventListener('click', handleMobLinkClick));
 
     // 8. Lightbox Setup
     const galMeta = (currentProject.gallery.length ? currentProject.gallery : [currentProject.image].filter(Boolean)).map((src, index) => ({ src: src as string, l: `Brand Asset ${index + 1}` }));
@@ -326,30 +346,40 @@ export default function ProjectPageClient({
       if (activeLb && activeLb.classList.contains('open')) return;
       const activeModal = document.getElementById('back-form-modal');
       if (activeModal && activeModal.classList.contains('open')) return;
-      if (e.key === 'ArrowLeft') router.push('/project/' + prevProjId);
-      if (e.key === 'ArrowRight') router.push('/project/' + nextProjId);
+      if (isEditableKeyTarget(e.target)) return;
+      if (e.key === 'ArrowLeft') goToPreviousProject();
+      if (e.key === 'ArrowRight') goToNextProject();
     };
     document.addEventListener('keydown', handleProjectSwitchKeys);
 
     // 10. Swipe Gesture switcher
-    let touchStartX = 0;
-    let touchStartY = 0;
-    const SWIPE_THRESHOLD = 60;
-    const ANGLE_LIMIT = 40;
+    const SWIPE_THRESHOLD = 70;
 
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
+      if (!projectNavigation || isInteractiveSwipeTarget(e.target)) {
+        touchStartRef.current = { x: 0, y: 0, enabled: false };
+        return;
+      }
+
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        enabled: window.innerWidth < 768,
+      };
     };
     const handleTouchEnd = (e: TouchEvent) => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      if (Math.abs(dy) > Math.abs(dx) * Math.tan(ANGLE_LIMIT * Math.PI / 180)) return;
-      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+      if (!touchStartRef.current.enabled || isInteractiveSwipeTarget(e.target)) return;
+
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      const isHorizontalSwipe = Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.2;
+      touchStartRef.current = { x: 0, y: 0, enabled: false };
+      if (!isHorizontalSwipe) return;
+
       if (dx < 0) {
-        router.push('/project/' + nextProjId);
+        goToNextProject();
       } else if (dx > 0) {
-        router.push('/project/' + prevProjId);
+        goToPreviousProject();
       }
     };
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -443,7 +473,25 @@ export default function ProjectPageClient({
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [id, router, projects, project]);
+  }, [goToNextProject, goToPreviousProject, id, project, projectNavigation, router]);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
+
+    const closeMobileNavOnDesktop = () => {
+      if (window.innerWidth > 768) {
+        setIsMobileNavOpen(false);
+      }
+    };
+
+    closeMobileNavOnDesktop();
+    window.addEventListener('resize', closeMobileNavOnDesktop);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('resize', closeMobileNavOnDesktop);
+    };
+  }, [isMobileNavOpen]);
 
   useEffect(() => {
     if (!project) return;
@@ -501,6 +549,33 @@ export default function ProjectPageClient({
   ].filter(card => card.text);
   const processSteps = project.process.length ? project.process : [];
   const similarProjects = projects.filter(item => item.id !== project.id).slice(0, 3);
+  const hasOverviewContent = Boolean(
+    project.overviewTitle?.trim() ||
+    project.description?.trim() ||
+    project.shortDescription?.trim() ||
+    project.challenge?.trim() ||
+    project.approach?.trim() ||
+    project.impact?.trim() ||
+    project.compliance?.trim()
+  );
+  const hasProcessContent = processSteps.length > 0;
+  const hasImpactContent = project.stats.length > 0;
+  const hasGalleryContent = galleryImages.length > 0;
+  const hasReelContent = Boolean(project.reelSection?.enabled && project.reelSection?.videoUrl?.trim());
+  const hasVideoContent = Boolean(project.videoUrl?.trim());
+  const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
+  const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
+  const showImpact = project.sectionVisibility?.impact !== false && hasImpactContent;
+  const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
+  const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
+  const showVideoShowcase = project.sectionVisibility?.videoShowcase !== false && hasVideoContent;
+  const showRelatedProjects = project.sectionVisibility?.relatedProjects !== false && similarProjects.length > 0;
+
+  if (process.env.NODE_ENV !== 'production' && project.sectionVisibility) {
+    console.log('Normalized sectionVisibility:', project.sectionVisibility);
+    console.log('Overview Visible:', showOverview);
+    console.log('Video Showcase Visible:', showVideoShowcase);
+  }
 
   return (
     <>
@@ -529,15 +604,66 @@ export default function ProjectPageClient({
             <li><a href="/#contact">Contact</a></li>
           </ul>
           <a href="/" className="nav-back" id="navBackBtn"><i className="fa-solid fa-arrow-left"></i> Back to Home</a>
-          <button className="ham" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
+          <button
+            className={`ham${isMobileNavOpen ? ' open' : ''}`}
+            id="ham"
+            aria-label="Menu"
+            aria-controls="mob"
+            aria-expanded={isMobileNavOpen}
+            type="button"
+            onClick={() => setIsMobileNavOpen(open => !open)}
+          >
+            <span></span><span></span><span></span>
+          </button>
         </div>
       </nav>
 
-      <div className="mob-nav" id="mob">
-        <a href="/">Home</a>
-        <a href="/#portfolio">Projects</a>
-        <a href="/#contact">Contact</a>
+      <div className={`mob-nav${isMobileNavOpen ? ' open' : ''}`} id="mob">
+        <button
+          className="mob-close"
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setIsMobileNavOpen(false)}
+        >
+          ×
+        </button>
+        <a href="/" onClick={() => setIsMobileNavOpen(false)}>Home</a>
+        <a href="/#portfolio" onClick={() => setIsMobileNavOpen(false)}>Projects</a>
+        <a href="/#contact" onClick={() => setIsMobileNavOpen(false)}>Contact</a>
       </div>
+
+      {projectNavigation && (
+        <nav className="project-navigation-shell" aria-label="Project navigation">
+          <aside className="project-navigation-rail project-navigation-rail--left">
+            <button
+              type="button"
+              className="project-navigation-arrow project-navigation-arrow--previous"
+              aria-label={`View previous project: ${projectNavigation.previous.title}`}
+              onClick={goToPreviousProject}
+              disabled={isProjectNavigating}
+            >
+              <svg className="project-navigation-arrow-icon" viewBox="0 0 48 96" aria-hidden="true" focusable="false">
+                <path d="M36 8 12 48l24 40" />
+              </svg>
+              <span className="project-navigation-arrow-label">Previous project</span>
+            </button>
+          </aside>
+          <aside className="project-navigation-rail project-navigation-rail--right">
+            <button
+              type="button"
+              className="project-navigation-arrow project-navigation-arrow--next"
+              aria-label={`View next project: ${projectNavigation.next.title}`}
+              onClick={goToNextProject}
+              disabled={isProjectNavigating}
+            >
+              <svg className="project-navigation-arrow-icon" viewBox="0 0 48 96" aria-hidden="true" focusable="false">
+                <path d="M12 8 36 48 12 88" />
+              </svg>
+              <span className="project-navigation-arrow-label">Next project</span>
+            </button>
+          </aside>
+        </nav>
+      )}
 
       <header className="proj-hero">
         <div className="hero-mesh"></div>
@@ -578,6 +704,7 @@ export default function ProjectPageClient({
         </div>
       </header>
 
+      {showOverview && (
       <section className="proj-overview" id="overview">
         <div className="wrap">
           <div className="overview-grid">
@@ -604,8 +731,9 @@ export default function ProjectPageClient({
           </div>
         </div>
       </section>
+      )}
 
-      {processSteps.length > 0 && (
+      {showProcess && (
       <section className="proj-process" id="process">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
@@ -613,7 +741,11 @@ export default function ProjectPageClient({
             {processSteps.map((step, index) => (
               <div className="tl-item rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
                 <div className="tl-dot">{step.icon || '•'}</div>
-                <div className="tl-body"><div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div><h3 className="tl-title">{step.title}</h3><p className="tl-text">{step.text}</p></div>
+                <div className="tl-body">
+                  <div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div>
+                  {step.title && <h3 className="tl-title">{step.title}</h3>}
+                  {step.text && <p className="tl-text">{step.text}</p>}
+                </div>
               </div>
             ))}
           </div>
@@ -621,7 +753,8 @@ export default function ProjectPageClient({
       </section>
       )}
 
-      <section id="project-gallery" className="sticky-section-gallery">
+      {showGallery && (
+      <section id="project-gallery" className="sticky-section-gallery" data-disable-project-swipe>
           <div className="gallery-scroll-container">
               <div className="gallery-header">
                   <h2>Brand Showcase</h2>
@@ -644,15 +777,20 @@ export default function ProjectPageClient({
           <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
         </div>
       </section>
+      )}
 
-      {project.stats.length > 0 && (
+      {showReel && project.reelSection && (
+          <ProjectReelSection reel={project.reelSection} />
+      )}
+
+      {showImpact && (
       <section className="proj-results" id="results">
         <div className="wrap impact-showcase">
           <h2 className="impact-title rv">Impact <span className="muted">Results</span></h2>
           <div className="impact-card-grid" aria-label="Impact result metrics">
             {project.stats.map((stat, index) => (
               <div className="impact-metric-card rv" style={{ transitionDelay: `${0.1 + index * 0.06}s` }} key={`${stat.label}-${index}`}>
-                <span className="impact-metric-label">{stat.label}</span>
+                {stat.label && <span className="impact-metric-label">{stat.label}</span>}
                 <div className="impact-metric-row">
                   {stat.before && <span className="impact-value-group"><span className="impact-before-label">Before</span><span className="impact-before">{stat.before}</span></span>}
                   {stat.before && <span className="impact-arrow" aria-hidden="true">→</span>}
@@ -668,31 +806,30 @@ export default function ProjectPageClient({
       </section>
       )}
 
-      <div className="project-switcher" aria-label="Project navigation">
-        <a className="project-switch project-prev" id="projectPrev" href={`/project/${prevId}`} aria-label="Previous project">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 20 8 12 16 4"></polyline></svg>
-        </a>
-        <a className="project-switch project-next" id="projectNext" href={`/project/${nextId}`} aria-label="Next project">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 20 16 12 8 4"></polyline></svg>
-        </a>
-      </div>
-
+      {showRelatedProjects && (
       <section className="proj-similar" id="similar">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s" }}>Explore <span className="grad">related work</span></h2>
           <div className="sim-grid">
             {similarProjects.map(item => (
-              <a href={`/project/${item.id}`} className="project-card" key={item.id}>
+              <a href={getProjectHref(item.id, projectNavigation?.filter || activeFilter)} className="project-card" key={item.id}>
                 <div className="card-visual"><div className="card-image-wrapper">
                   {item.image ? <img src={item.image} alt={item.imageAlt || item.title} loading="lazy" /> : <div className="card-placeholder" style={{ background: item.placeholderGradient }}><span className="placeholder-icon">{item.icon || '✨'}</span></div>}
-                  <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>
+                  {item.category && <div className="card-overlay"><div className="overlay-content"><span className="overlay-category">{item.category}</span></div></div>}
                 </div></div>
-                <div className="card-info"><h3 className="card-title">{item.title}</h3><div className="meta-container"><div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div><div className="show-project-view">Show Project</div></div></div>
+                <div className="card-info">
+                  <h3 className="card-title">{item.title}</h3>
+                  <div className="meta-container">
+                    {item.tags.length > 0 && <div className="card-tags">{item.tags.slice(0, 2).map(tag => <span className="tag" key={`${item.id}-${tag}`}>{tag}</span>)}</div>}
+                    <div className="show-project-view">Show Project</div>
+                  </div>
+                </div>
               </a>
             ))}
           </div>
         </div>
       </section>
+      )}
 
       <div id="back-form-modal" className="modal-overlay">
         <div className="modal-card">
