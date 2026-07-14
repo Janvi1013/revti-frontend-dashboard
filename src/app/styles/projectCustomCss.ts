@@ -2018,4 +2018,52 @@ export const projectCustomCss = `
     }
   }
 
+
+  .project-video-showcase {
+    width: min(100%, 1180px);
+    margin-inline: auto;
+    padding: clamp(68px, 8vw, 108px) 20px;
+    background: var(--bg2) !important;
+  }
+
+  .project-video-showcase-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: #000;
+    box-shadow: 0 34px 96px rgba(0,0,0,.5);
+  }
+
+  .project-video-showcase-player {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 0;
+    background: #000;
+  }
+
+  .project-video-showcase-link {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--txt);
+    text-decoration: none;
+    background: var(--bg3);
+  }
+
+  @media (max-width: 640px) {
+    .project-video-showcase {
+      padding: clamp(52px, 10vw, 76px) 16px;
+    }
+
+    .project-video-showcase-frame {
+      border-radius: 18px;
+    }
+  }
+
 `;

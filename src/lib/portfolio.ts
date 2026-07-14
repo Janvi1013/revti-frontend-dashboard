@@ -98,6 +98,12 @@ export type ProjectReelItem = {
   displayOrder?: number;
 };
 
+export type ProjectVideo = {
+  type?: string;
+  source?: string;
+  url?: string;
+};
+
 export type ProjectReelSection = {
   enabled: boolean;
   title?: string;
@@ -146,9 +152,15 @@ export type PortfolioProject = {
   process: PortfolioProcessStep[];
   feedback: PortfolioFeedback[];
   sectionVisibility?: ProjectSectionVisibility;
+  section_visibility?: ProjectSectionVisibility;
   clientLogo?: string;
+  video?: ProjectVideo;
   videoType?: string;
+  videoSource?: string;
   videoUrl?: string;
+  video_type?: string;
+  video_source?: string;
+  video_url?: string;
   reelSection?: ProjectReelSection;
   icon?: string;
   placeholderGradient?: string;
@@ -630,6 +642,40 @@ const getRawPortfolioProjects = (payload: any): any[] => {
   return candidates.find(Array.isArray) || [];
 };
 
+
+const normalizeProjectVideo = (source: Record<string, unknown>): ProjectVideo => {
+  const rawVideo = source.video && typeof source.video === 'object' && !Array.isArray(source.video)
+    ? source.video as Record<string, unknown>
+    : undefined;
+
+  const videoType = String(
+    rawVideo?.type ??
+    source.video_type ??
+    source.videoType ??
+    ''
+  ).trim().toLowerCase();
+
+  const videoSource = String(
+    rawVideo?.source ??
+    source.video_source ??
+    source.videoSource ??
+    videoType
+  ).trim().toLowerCase();
+
+  const videoUrl = resolveMediaUrl(String(
+    rawVideo?.url ??
+    source.video_url ??
+    source.videoUrl ??
+    ''
+  ).trim());
+
+  return {
+    type: videoType,
+    source: videoSource,
+    url: videoUrl,
+  };
+};
+
 export const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
   const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
   if (!title) return null;
@@ -647,6 +693,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const sectionVisibility = normalizeProjectSectionVisibility(rawSectionVisibility);
   const rawReelSection = item?.reelSection ?? item?.reel_section;
   const reelSection = normalizeProjectReelSection(rawReelSection);
+  const video = normalizeProjectVideo(item);
 
   if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
     console.log('Raw section_visibility:', rawSectionVisibility);
@@ -699,9 +746,15 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
       text: getStringValue(f, ['text', 'quote', 'feedback']),
     })).filter(f => f.name || f.text),
     sectionVisibility,
+    section_visibility: sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
-    videoType: getStringValue(item, ['video_type', 'videoType']),
-    videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
+    video,
+    videoType: video.type,
+    videoSource: video.source,
+    videoUrl: video.url,
+    video_type: video.type,
+    video_source: video.source,
+    video_url: video.url,
     reelSection,
     status: getStringValue(item, ['status']) || 'published',
     sequence: getNumberValue(item, ['sequence', 'display_order', 'displayOrder']) ?? index,

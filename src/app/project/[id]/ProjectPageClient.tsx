@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
@@ -17,6 +17,85 @@ const isEditableKeyTarget = (target: EventTarget | null) => (
   target instanceof Element &&
   Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
 );
+
+
+const getYoutubeEmbedUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const videoId = host === 'youtu.be'
+      ? parsed.pathname.split('/').filter(Boolean)[0]
+      : parsed.searchParams.get('v') || parsed.pathname.split('/').filter(Boolean).at(-1);
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+  } catch {
+    return '';
+  }
+};
+
+const getVimeoEmbedUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const videoId = parsed.pathname.split('/').filter(Boolean).find((part) => /^\d+$/.test(part));
+
+    return videoId ? `https://player.vimeo.com/video/${videoId}` : '';
+  } catch {
+    return '';
+  }
+};
+
+const isHtmlVideoSource = (source: string, url: string) => (
+  ['upload', 'direct', 'mp4'].includes(source) || /\.(?:mp4|webm|mov|m4v)(?:\?.*)?$/i.test(url)
+);
+
+type VideoShowcaseProps = {
+  source: string;
+  url: string;
+};
+
+function VideoShowcase({ source, url }: VideoShowcaseProps) {
+  const normalizedSource = source.trim().toLowerCase();
+  const youtubeEmbedUrl = normalizedSource === 'youtube' ? getYoutubeEmbedUrl(url) : '';
+  const vimeoEmbedUrl = normalizedSource === 'vimeo' ? getVimeoEmbedUrl(url) : '';
+
+  let content: ReactNode;
+
+  if (isHtmlVideoSource(normalizedSource, url)) {
+    content = (
+      <video
+        src={url}
+        controls
+        playsInline
+        preload="metadata"
+        className="project-video-showcase-player"
+      />
+    );
+  } else if (youtubeEmbedUrl || vimeoEmbedUrl) {
+    content = (
+      <iframe
+        className="project-video-showcase-player"
+        src={youtubeEmbedUrl || vimeoEmbedUrl}
+        title="Project video showcase"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      />
+    );
+  } else {
+    content = (
+      <a className="project-video-showcase-link" href={url} target="_blank" rel="noopener noreferrer">
+        Open project video
+      </a>
+    );
+  }
+
+  return (
+    <section className="proj-video project-video-showcase" aria-label="Project video showcase" data-disable-project-swipe>
+      <div className="project-video-showcase-frame">
+        {content}
+      </div>
+    </section>
+  );
+}
 
 export default function ProjectPageClient({
   allProjects: initialAllProjects,
@@ -589,19 +668,35 @@ export default function ProjectPageClient({
     ?.filter((item) => item.enabled !== false)
     .filter((item) => item.videoUrl?.trim()) ?? [];
   const hasReelContent = project.reelSection?.enabled === true && visibleReels.length > 0;
-  const hasVideoContent = Boolean(project.videoUrl?.trim());
+  const videoVisibility = project.sectionVisibility?.videoShowcase ?? project.section_visibility?.videoShowcase;
+  const videoType = project.video?.type?.trim().toLowerCase() || project.video_type?.trim().toLowerCase() || project.videoType?.trim().toLowerCase() || '';
+  const videoSource = project.video?.source?.trim().toLowerCase() || project.video_source?.trim().toLowerCase() || project.videoSource?.trim().toLowerCase() || videoType;
+  const videoUrl = project.video?.url?.trim() || project.video_url?.trim() || project.videoUrl?.trim() || '';
+  const hasVideoShowcase = videoType !== 'none' && Boolean(videoUrl);
   const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
   const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
   const showImpact = project.sectionVisibility?.impact !== false && hasImpactContent;
   const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
   const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
-  const showVideoShowcase = project.sectionVisibility?.videoShowcase !== false && hasVideoContent;
+  const showVideoShowcase = videoVisibility !== false && hasVideoShowcase;
   const showRelatedProjects = project.sectionVisibility?.relatedProjects !== false && similarProjects.length > 0;
 
-  if (process.env.NODE_ENV !== 'production' && project.sectionVisibility) {
+  if (process.env.NODE_ENV !== 'production') {
     console.log('Normalized sectionVisibility:', project.sectionVisibility);
     console.log('Overview Visible:', showOverview);
     console.log('Video Showcase Visible:', showVideoShowcase);
+    console.log('VIDEO SHOWCASE DEBUG', {
+      rawVideo: project.video,
+      legacyType: project.video_type,
+      legacySource: project.video_source,
+      legacyUrl: project.video_url,
+      videoVisibility,
+      videoType,
+      videoSource,
+      videoUrl,
+      hasVideoShowcase,
+      showVideoShowcase,
+    });
   }
 
   return (
@@ -804,6 +899,10 @@ export default function ProjectPageClient({
           <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
         </div>
       </section>
+      )}
+
+      {showVideoShowcase && (
+        <VideoShowcase source={videoSource} url={videoUrl} />
       )}
 
       {showReel && project.reelSection && (
