@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
 import { getPublishedProjects, loadWebsiteContent, normalizeFilterSlug, resolveProjectNavigationFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
@@ -19,18 +19,21 @@ const isEditableKeyTarget = (target: EventTarget | null) => (
 );
 
 export default function ProjectPageClient({
-  initialProjects,
-  initialProject,
-  id
+  allProjects: initialAllProjects,
+  categories,
+  id,
+  project: initialProject,
 }: {
-  initialProjects: PortfolioProject[];
-  initialProject: PortfolioProject | null;
+  allProjects: PortfolioProject[];
+  categories: string[];
   id: string;
+  project: PortfolioProject | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [projects, setProjects] = useState<PortfolioProject[]>(initialProjects);
+  const [projects, setProjects] = useState<PortfolioProject[]>(initialAllProjects);
   const [project, setProject] = useState<PortfolioProject | null>(initialProject);
   
   const [projectNotFound, setProjectNotFound] = useState(initialProject === null);
@@ -42,10 +45,10 @@ export default function ProjectPageClient({
 
   const rawFilter = searchParams.get('filter')?.trim() || 'all';
   const requestedFilter = normalizeFilterSlug(rawFilter) || 'all';
-  const allProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
+  const allPublishedProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
   const navigationFilterState = useMemo(
-    () => resolveProjectNavigationFilter(allProjects, requestedFilter, project?.id),
-    [allProjects, project?.id, requestedFilter]
+    () => resolveProjectNavigationFilter(allPublishedProjects, requestedFilter, project?.id),
+    [allPublishedProjects, project?.id, requestedFilter]
   );
   const {
     requestedProjects,
@@ -73,22 +76,26 @@ export default function ProjectPageClient({
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
 
-    console.log('Requested filter:', requestedFilter);
-    console.log('Resolved filter:', resolvedNavigationFilter);
-    console.log('Using fallback to all:', shouldFallbackToAll);
-    console.log('Viewport width:', window.innerWidth);
-    console.log('Navigation can render:', canNavigate);
-    console.log('Navigation projects:', navigationProjects.length);
-    console.log('Published IDs:', allProjects.map((item) => item.id));
-    console.log('Filtered IDs:', requestedProjects.map((item) => item.id));
-    console.log('Navigation IDs:', navigationProjects.map((item) => item.id));
-    console.log('Current ID:', project?.id);
-    console.log('Current index:', currentIndex);
-    console.log('Previous ID:', previousProject?.id);
-    console.log('Next ID:', nextProject?.id);
-    if (previousProject) console.log('Previous URL:', getProjectHref(previousProject.id, resolvedNavigationFilter));
-    if (nextProject) console.log('Next URL:', getProjectHref(nextProject.id, resolvedNavigationFilter));
-  }, [allProjects, canNavigate, currentIndex, navigationProjects, nextProject, previousProject, project?.id, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
+    console.log('PROJECT NAV DEBUG', {
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : null,
+      allProjectsLength: projects.length,
+      categories,
+      requestedFilter,
+      resolvedNavigationFilter,
+      usingFallbackToAll: shouldFallbackToAll,
+      filteredIds: requestedProjects.map((item) => item.id),
+      allPublishedIds: allPublishedProjects.map((item) => item.id),
+      navigationIds: navigationProjects.map((item) => item.id),
+      currentId: project?.id,
+      currentIndex,
+      previousId: previousProject?.id,
+      nextId: nextProject?.id,
+      previousHref: previousProject ? getProjectHref(previousProject.id, resolvedNavigationFilter) : null,
+      nextHref: nextProject ? getProjectHref(nextProject.id, resolvedNavigationFilter) : null,
+      canNavigate,
+      isProjectNavigating,
+    });
+  }, [allPublishedProjects, canNavigate, categories, currentIndex, isProjectNavigating, navigationProjects, nextProject, previousProject, project?.id, projects.length, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
 
   const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
     if (!targetProject || isProjectNavigating) return;
@@ -105,6 +112,22 @@ export default function ProjectPageClient({
 
   const goToPreviousProject = useCallback(() => navigateToProject(previousProject), [navigateToProject, previousProject]);
   const goToNextProject = useCallback(() => navigateToProject(nextProject), [navigateToProject, nextProject]);
+
+  useEffect(() => {
+    setIsProjectNavigating(false);
+  }, [project?.id, pathname]);
+
+  useEffect(() => {
+    if (!isProjectNavigating) return;
+
+    const timer = window.setTimeout(() => {
+      setIsProjectNavigating(false);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isProjectNavigating]);
 
   useEffect(() => {
     let active = true;
@@ -133,7 +156,7 @@ export default function ProjectPageClient({
         const result = await loadWebsiteContent({ signal: controller.signal });
         if (!active || controller.signal.aborted) return;
 
-        const nextProjects = result.ok ? result.content.projects : [];
+        const nextProjects = result.ok ? getPublishedProjects(result.content.projects) : [];
         const matchedProject = nextProjects.find(item => item.id === id) || null;
         setProjects(nextProjects);
         

@@ -475,9 +475,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     </div>
 
     {/* Filter Buttons */}
-    <nav className="home-project-filter-scroll rv" aria-label="Filter projects">
-      <div className="home-project-filter-list">
-        {availableProjectFilters.map((filter) => (
+    <nav className="home-project-filter-nav rv" aria-label="Filter projects">
+      {availableProjectFilters.map((filter) => (
           <button
             type="button"
             className={resolvedProjectFilter === filter.slug ? 'home-project-filter-button is-active' : 'home-project-filter-button'}
@@ -496,7 +495,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
             {filter.label}
           </button>
         ))}
-      </div>
     </nav>
 
     <div className="sr-only home-project-results-status" aria-live="polite">

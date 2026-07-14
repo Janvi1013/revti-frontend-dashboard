@@ -956,47 +956,6 @@ export const projectCustomCss = `
   }
 
 
-  /* Studio-style project prev/next arrows */
-  .project-switcher {
-    position: fixed;
-    top: 50%;
-    left: 0;
-    right: 0;
-    transform: translateY(-50%);
-    display: flex;
-    justify-content: space-between;
-    padding: 0 clamp(12px, 2vw, 32px);
-    pointer-events: none;
-    z-index: 8500;
-  }
-  .project-switch {
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #ffffff !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    opacity: 0.65;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    cursor: none !important;
-  }
-  .project-switch:hover {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-  .project-switch svg {
-    /* Arrow shrinks fluidly — never wider than ~7% of viewport */
-    width:  clamp(32px, 5vw, 80px);
-    height: clamp(64px, 10vw, 160px);
-    stroke: #ffffff;
-    stroke-width: 0.9;
-    fill: none;
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.22));
-  }
-
   /*
    * CONTENT SAFE-ZONE
    * Arrow footprint from edge = container-padding + svg-width
@@ -1031,9 +990,6 @@ export const projectCustomCss = `
 
   /* ── MOBILE: hide arrows, fix nav, normalise paddings ── */
   @media (max-width: 768px) {
-    /* Hide prev/next arrows — no room on small screens */
-    .project-switcher { display: none !important; }
-
     /* Nav-back button: shrink so it doesn't collide with logo */
     .nav-back {
       font-size: 11px !important;
@@ -1501,7 +1457,7 @@ export const projectCustomCss = `
   .project-navigation-shell {
     position: fixed;
     inset: 0;
-    z-index: 8500;
+    z-index: 8800;
     pointer-events: none;
     display: grid;
     grid-template-columns: minmax(72px, 9vw) minmax(0, 1fr) minmax(72px, 9vw);
@@ -1534,7 +1490,7 @@ export const projectCustomCss = `
     background: transparent;
     color: rgba(255,255,255,.72);
     pointer-events: auto;
-    z-index: 100;
+    z-index: 200;
     cursor: pointer !important;
     transition: color .25s ease, opacity .25s ease, transform .25s ease;
   }
@@ -1549,7 +1505,7 @@ export const projectCustomCss = `
       pointer-events: auto;
       visibility: visible;
       opacity: 1;
-      z-index: 100;
+      z-index: 200;
     }
   }
 
