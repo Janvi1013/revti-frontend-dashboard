@@ -438,7 +438,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   <div className="orb orb-2"></div>
   <div className="wrap">
     <div className="hero-content">
-      {heroContent?.eyebrow && <span className="hero-eyebrow rv">{heroContent.eyebrow}</span>}
       <h1 className="hero-h1">{heroContent ? renderHighlightedText(heroContent.title, heroContent.highlight) : (isContentLoading ? 'Loading live content' : 'No hero content available')}</h1>
       {heroContent?.subtitle && <p className="hero-sub rv" style={{ transitionDelay: ".1s" }}>{heroContent.subtitle}</p>}
       <div className="hero-actions rv" style={{ transitionDelay: ".2s" }}>
@@ -475,9 +474,8 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     </div>
 
     {/* Filter Buttons */}
-    <nav className="home-project-filter-scroll rv" aria-label="Filter projects">
-      <div className="home-project-filter-list">
-        {availableProjectFilters.map((filter) => (
+    <nav className="home-project-filter-nav rv" aria-label="Filter projects">
+      {availableProjectFilters.map((filter) => (
           <button
             type="button"
             className={resolvedProjectFilter === filter.slug ? 'home-project-filter-button is-active' : 'home-project-filter-button'}
@@ -496,7 +494,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
             {filter.label}
           </button>
         ))}
-      </div>
     </nav>
 
     <div className="sr-only home-project-results-status" aria-live="polite">

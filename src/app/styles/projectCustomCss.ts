@@ -956,47 +956,6 @@ export const projectCustomCss = `
   }
 
 
-  /* Studio-style project prev/next arrows */
-  .project-switcher {
-    position: fixed;
-    top: 50%;
-    left: 0;
-    right: 0;
-    transform: translateY(-50%);
-    display: flex;
-    justify-content: space-between;
-    padding: 0 clamp(12px, 2vw, 32px);
-    pointer-events: none;
-    z-index: 8500;
-  }
-  .project-switch {
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #ffffff !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    opacity: 0.65;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    cursor: none !important;
-  }
-  .project-switch:hover {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-  .project-switch svg {
-    /* Arrow shrinks fluidly — never wider than ~7% of viewport */
-    width:  clamp(32px, 5vw, 80px);
-    height: clamp(64px, 10vw, 160px);
-    stroke: #ffffff;
-    stroke-width: 0.9;
-    fill: none;
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.22));
-  }
-
   /*
    * CONTENT SAFE-ZONE
    * Arrow footprint from edge = container-padding + svg-width
@@ -1031,9 +990,6 @@ export const projectCustomCss = `
 
   /* ── MOBILE: hide arrows, fix nav, normalise paddings ── */
   @media (max-width: 768px) {
-    /* Hide prev/next arrows — no room on small screens */
-    .project-switcher { display: none !important; }
-
     /* Nav-back button: shrink so it doesn't collide with logo */
     .nav-back {
       font-size: 11px !important;
@@ -1501,7 +1457,7 @@ export const projectCustomCss = `
   .project-navigation-shell {
     position: fixed;
     inset: 0;
-    z-index: 8500;
+    z-index: 8800;
     pointer-events: none;
     display: grid;
     grid-template-columns: minmax(72px, 9vw) minmax(0, 1fr) minmax(72px, 9vw);
@@ -1534,7 +1490,7 @@ export const projectCustomCss = `
     background: transparent;
     color: rgba(255,255,255,.72);
     pointer-events: auto;
-    z-index: 100;
+    z-index: 200;
     cursor: pointer !important;
     transition: color .25s ease, opacity .25s ease, transform .25s ease;
   }
@@ -1549,7 +1505,7 @@ export const projectCustomCss = `
       pointer-events: auto;
       visibility: visible;
       opacity: 1;
-      z-index: 100;
+      z-index: 200;
     }
   }
 
@@ -1964,6 +1920,179 @@ export const projectCustomCss = `
   @media (max-width: 640px) {
     .project-reel-grid {
       grid-template-columns: minmax(0, min(100%, 360px));
+    }
+  }
+
+
+  /* Process mobile readability: keep the existing rail/dot timeline, but prevent narrow word columns. */
+  .project-process-section .wrap {
+    max-width: 1100px;
+  }
+
+  .project-process-heading {
+    max-width: min(100%, 680px);
+    margin-inline: auto;
+    text-align: center;
+    font-size: clamp(32px, 7vw, 72px) !important;
+    line-height: 0.98 !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+    text-wrap: balance;
+  }
+
+  .project-process-timeline {
+    width: min(100%, 900px);
+    margin-inline: auto;
+  }
+
+  .project-process-step {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: start;
+  }
+
+  .project-process-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-process-card-title,
+  .project-process-card-description {
+    max-width: 100%;
+    min-width: 0;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .project-process-card-description {
+    line-height: 1.65;
+  }
+
+  @media (max-width: 600px) {
+    .project-process-section {
+      padding-inline: 16px;
+    }
+
+    .project-process-section .wrap {
+      padding-inline: 0 !important;
+    }
+
+    .project-process-heading {
+      font-size: clamp(30px, 10vw, 44px) !important;
+      line-height: 1.02 !important;
+      padding-inline: 16px;
+      margin-bottom: 38px !important;
+    }
+
+    .project-process-step {
+      grid-template-columns: 38px minmax(0, 1fr) !important;
+      column-gap: 10px !important;
+      gap: 10px !important;
+    }
+
+    .project-process-timeline::before {
+      left: 18px !important;
+    }
+
+    .project-process-step .tl-dot {
+      width: 38px !important;
+      height: 38px !important;
+      font-size: 14px !important;
+    }
+
+    .project-process-card {
+      padding: 18px 16px !important;
+      border-radius: 16px !important;
+    }
+
+    .project-process-card-title {
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .project-process-card-description {
+      font-size: 14px;
+      line-height: 1.65;
+    }
+  }
+
+
+  .project-video-showcase {
+    width: min(100%, 1180px);
+    margin-inline: auto;
+    padding: clamp(68px, 8vw, 108px) 20px;
+    background: var(--bg2) !important;
+  }
+
+  .project-video-showcase-copy {
+    width: min(100%, 820px);
+    margin: 0 auto clamp(28px, 5vw, 52px);
+    text-align: center;
+  }
+
+  .project-video-heading {
+    margin: 0;
+    color: var(--txt);
+    font-size: clamp(34px, 6vw, 82px);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -.06em;
+    text-wrap: balance;
+  }
+
+  .project-video-description {
+    max-width: 640px;
+    margin: clamp(14px, 2.5vw, 24px) auto 0;
+    color: var(--txt2);
+    font-size: clamp(14px, 1.3vw, 17px);
+    line-height: 1.75;
+    overflow-wrap: break-word;
+  }
+
+  .project-video-showcase-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: #000;
+    box-shadow: 0 34px 96px rgba(0,0,0,.5);
+  }
+
+  .project-video-showcase-player {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 0;
+    background: #000;
+  }
+
+  .project-video-showcase-link {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--txt);
+    text-decoration: none;
+    background: var(--bg3);
+  }
+
+  @media (max-width: 640px) {
+    .project-video-showcase {
+      padding: clamp(52px, 10vw, 76px) 16px;
+    }
+
+    .project-video-heading {
+      font-size: clamp(30px, 11vw, 48px);
+      letter-spacing: -.05em;
+    }
+
+    .project-video-showcase-frame {
+      border-radius: 18px;
     }
   }
 

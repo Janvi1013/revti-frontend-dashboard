@@ -44,6 +44,19 @@ export type ProjectCategory = {
 };
 
 
+export type ProjectVideo = {
+  type?: string;
+  source?: string;
+  url?: string;
+  title?: string;
+  description?: string;
+};
+
+export type ProjectVideoShowcase = {
+  title?: string;
+  description?: string;
+};
+
 export type ProjectReelItem = {
   id: string;
   enabled: boolean;
@@ -92,8 +105,15 @@ export type Project = {
   status?: string;
   sequence?: number;
   created_at?: string;
+  video?: ProjectVideo;
+  videoShowcase?: ProjectVideoShowcase;
+  video_showcase?: ProjectVideoShowcase;
   video_type?: string;
+  video_source?: string;
   video_url?: string;
+  videoType?: string;
+  videoSource?: string;
+  videoUrl?: string;
   industry?: string;
   sprint?: string;
   client_logo?: string;

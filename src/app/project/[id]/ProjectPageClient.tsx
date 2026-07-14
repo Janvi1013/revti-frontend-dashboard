@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
 import { getPublishedProjects, loadWebsiteContent, normalizeFilterSlug, resolveProjectNavigationFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
@@ -18,19 +18,180 @@ const isEditableKeyTarget = (target: EventTarget | null) => (
   Boolean(target.closest('input, textarea, select, video, [contenteditable="true"]'))
 );
 
+
+const getYoutubeEmbedUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const videoId = host === 'youtu.be'
+      ? parsed.pathname.split('/').filter(Boolean)[0]
+      : parsed.searchParams.get('v') || parsed.pathname.split('/').filter(Boolean).at(-1);
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+  } catch {
+    return '';
+  }
+};
+
+const getVimeoEmbedUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const videoId = parsed.pathname.split('/').filter(Boolean).find((part) => /^\d+$/.test(part));
+
+    return videoId ? `https://player.vimeo.com/video/${videoId}` : '';
+  } catch {
+    return '';
+  }
+};
+
+const isHtmlVideoSource = (source: string, url: string) => (
+  ['upload', 'direct', 'mp4'].includes(source) || /\.(?:mp4|webm|mov|m4v)(?:\?.*)?$/i.test(url)
+);
+
+type VideoShowcaseProps = {
+  description?: string;
+  source: string;
+  title?: string;
+  url: string;
+};
+
+function VideoShowcase({ description, source, title, url }: VideoShowcaseProps) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const normalizedSource = source.trim().toLowerCase();
+  const normalizedTitle = title?.trim() || '';
+  const normalizedDescription = description?.trim() || '';
+  const youtubeEmbedUrl = normalizedSource === 'youtube' ? getYoutubeEmbedUrl(url) : '';
+  const vimeoEmbedUrl = normalizedSource === 'vimeo' ? getVimeoEmbedUrl(url) : '';
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || typeof window === 'undefined') return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    const gsap = (window as any).gsap;
+    const ScrollTrigger = (window as any).ScrollTrigger;
+    if (!gsap || !ScrollTrigger) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const context = gsap.context(() => {
+      const heading = section.querySelector('.project-video-heading');
+      const descriptionEl = section.querySelector('.project-video-description');
+      const frames = section.querySelectorAll('.project-video-showcase-frame');
+
+      if (heading) {
+        gsap.fromTo(heading, { opacity: 0, y: 30 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+
+      if (descriptionEl) {
+        gsap.fromTo(descriptionEl, { opacity: 0, y: 24 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+
+      if (frames.length) {
+        gsap.fromTo(frames, { opacity: 0, y: 40, scale: 0.98 }, {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+    }, section);
+
+    return () => {
+      context.revert();
+    };
+  }, []);
+
+  let content: ReactNode;
+
+  if (isHtmlVideoSource(normalizedSource, url)) {
+    content = (
+      <video
+        src={url}
+        controls
+        playsInline
+        preload="metadata"
+        className="project-video-showcase-player"
+      />
+    );
+  } else if (youtubeEmbedUrl || vimeoEmbedUrl) {
+    content = (
+      <iframe
+        className="project-video-showcase-player"
+        src={youtubeEmbedUrl || vimeoEmbedUrl}
+        title="Project video showcase"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      />
+    );
+  } else {
+    content = (
+      <a className="project-video-showcase-link" href={url} target="_blank" rel="noopener noreferrer">
+        Open project video
+      </a>
+    );
+  }
+
+  return (
+    <section ref={sectionRef} className="proj-video project-video-showcase" aria-label="Project video showcase" data-disable-project-swipe>
+      {(normalizedTitle || normalizedDescription) && (
+        <div className="project-video-showcase-copy">
+          {normalizedTitle && <h2 className="project-video-heading">{normalizedTitle}</h2>}
+          {normalizedDescription && <p className="project-video-description">{normalizedDescription}</p>}
+        </div>
+      )}
+      <div className="project-video-showcase-frame">
+        {content}
+      </div>
+    </section>
+  );
+}
+
 export default function ProjectPageClient({
-  initialProjects,
-  initialProject,
-  id
+  allProjects: initialAllProjects,
+  categories,
+  id,
+  project: initialProject,
 }: {
-  initialProjects: PortfolioProject[];
-  initialProject: PortfolioProject | null;
+  allProjects: PortfolioProject[];
+  categories: string[];
   id: string;
+  project: PortfolioProject | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [projects, setProjects] = useState<PortfolioProject[]>(initialProjects);
+  const [projects, setProjects] = useState<PortfolioProject[]>(initialAllProjects);
   const [project, setProject] = useState<PortfolioProject | null>(initialProject);
   
   const [projectNotFound, setProjectNotFound] = useState(initialProject === null);
@@ -42,10 +203,10 @@ export default function ProjectPageClient({
 
   const rawFilter = searchParams.get('filter')?.trim() || 'all';
   const requestedFilter = normalizeFilterSlug(rawFilter) || 'all';
-  const allProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
+  const allPublishedProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
   const navigationFilterState = useMemo(
-    () => resolveProjectNavigationFilter(allProjects, requestedFilter, project?.id),
-    [allProjects, project?.id, requestedFilter]
+    () => resolveProjectNavigationFilter(allPublishedProjects, requestedFilter, project?.id),
+    [allPublishedProjects, project?.id, requestedFilter]
   );
   const {
     requestedProjects,
@@ -73,22 +234,26 @@ export default function ProjectPageClient({
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
 
-    console.log('Requested filter:', requestedFilter);
-    console.log('Resolved filter:', resolvedNavigationFilter);
-    console.log('Using fallback to all:', shouldFallbackToAll);
-    console.log('Viewport width:', window.innerWidth);
-    console.log('Navigation can render:', canNavigate);
-    console.log('Navigation projects:', navigationProjects.length);
-    console.log('Published IDs:', allProjects.map((item) => item.id));
-    console.log('Filtered IDs:', requestedProjects.map((item) => item.id));
-    console.log('Navigation IDs:', navigationProjects.map((item) => item.id));
-    console.log('Current ID:', project?.id);
-    console.log('Current index:', currentIndex);
-    console.log('Previous ID:', previousProject?.id);
-    console.log('Next ID:', nextProject?.id);
-    if (previousProject) console.log('Previous URL:', getProjectHref(previousProject.id, resolvedNavigationFilter));
-    if (nextProject) console.log('Next URL:', getProjectHref(nextProject.id, resolvedNavigationFilter));
-  }, [allProjects, canNavigate, currentIndex, navigationProjects, nextProject, previousProject, project?.id, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
+    console.log('PROJECT NAV DEBUG', {
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : null,
+      allProjectsLength: projects.length,
+      categories,
+      requestedFilter,
+      resolvedNavigationFilter,
+      usingFallbackToAll: shouldFallbackToAll,
+      filteredIds: requestedProjects.map((item) => item.id),
+      allPublishedIds: allPublishedProjects.map((item) => item.id),
+      navigationIds: navigationProjects.map((item) => item.id),
+      currentId: project?.id,
+      currentIndex,
+      previousId: previousProject?.id,
+      nextId: nextProject?.id,
+      previousHref: previousProject ? getProjectHref(previousProject.id, resolvedNavigationFilter) : null,
+      nextHref: nextProject ? getProjectHref(nextProject.id, resolvedNavigationFilter) : null,
+      canNavigate,
+      isProjectNavigating,
+    });
+  }, [allPublishedProjects, canNavigate, categories, currentIndex, isProjectNavigating, navigationProjects, nextProject, previousProject, project?.id, projects.length, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
 
   const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
     if (!targetProject || isProjectNavigating) return;
@@ -105,6 +270,22 @@ export default function ProjectPageClient({
 
   const goToPreviousProject = useCallback(() => navigateToProject(previousProject), [navigateToProject, previousProject]);
   const goToNextProject = useCallback(() => navigateToProject(nextProject), [navigateToProject, nextProject]);
+
+  useEffect(() => {
+    setIsProjectNavigating(false);
+  }, [project?.id, pathname]);
+
+  useEffect(() => {
+    if (!isProjectNavigating) return;
+
+    const timer = window.setTimeout(() => {
+      setIsProjectNavigating(false);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isProjectNavigating]);
 
   useEffect(() => {
     let active = true;
@@ -133,7 +314,7 @@ export default function ProjectPageClient({
         const result = await loadWebsiteContent({ signal: controller.signal });
         if (!active || controller.signal.aborted) return;
 
-        const nextProjects = result.ok ? result.content.projects : [];
+        const nextProjects = result.ok ? getPublishedProjects(result.content.projects) : [];
         const matchedProject = nextProjects.find(item => item.id === id) || null;
         setProjects(nextProjects);
         
@@ -566,19 +747,39 @@ export default function ProjectPageClient({
     ?.filter((item) => item.enabled !== false)
     .filter((item) => item.videoUrl?.trim()) ?? [];
   const hasReelContent = project.reelSection?.enabled === true && visibleReels.length > 0;
-  const hasVideoContent = Boolean(project.videoUrl?.trim());
+  const videoVisibility = project.sectionVisibility?.videoShowcase ?? project.section_visibility?.videoShowcase;
+  const videoType = project.video?.type?.trim().toLowerCase() || project.video_type?.trim().toLowerCase() || project.videoType?.trim().toLowerCase() || '';
+  const videoSource = project.video?.source?.trim().toLowerCase() || project.video_source?.trim().toLowerCase() || project.videoSource?.trim().toLowerCase() || videoType;
+  const videoUrl = project.video?.url?.trim() || project.video_url?.trim() || project.videoUrl?.trim() || '';
+  const videoTitle = project.videoShowcase?.title?.trim() || project.video?.title?.trim() || 'Project Video';
+  const videoDescription = project.videoShowcase?.description?.trim() || project.video?.description?.trim() || '';
+  const hasVideoShowcase = videoType !== 'none' && Boolean(videoUrl);
   const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
   const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
   const showImpact = project.sectionVisibility?.impact !== false && hasImpactContent;
   const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
   const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
-  const showVideoShowcase = project.sectionVisibility?.videoShowcase !== false && hasVideoContent;
+  const showVideoShowcase = videoVisibility !== false && hasVideoShowcase;
   const showRelatedProjects = project.sectionVisibility?.relatedProjects !== false && similarProjects.length > 0;
 
-  if (process.env.NODE_ENV !== 'production' && project.sectionVisibility) {
+  if (process.env.NODE_ENV !== 'production') {
     console.log('Normalized sectionVisibility:', project.sectionVisibility);
     console.log('Overview Visible:', showOverview);
     console.log('Video Showcase Visible:', showVideoShowcase);
+    console.log('VIDEO SHOWCASE DEBUG', {
+      rawVideo: project.video,
+      legacyType: project.video_type,
+      legacySource: project.video_source,
+      legacyUrl: project.video_url,
+      videoVisibility,
+      videoType,
+      videoSource,
+      videoUrl,
+      videoTitle,
+      videoDescription,
+      hasVideoShowcase,
+      showVideoShowcase,
+    });
   }
 
   return (
@@ -738,17 +939,17 @@ export default function ProjectPageClient({
       )}
 
       {showProcess && (
-      <section className="proj-process" id="process">
+      <section className="proj-process project-process-section" id="process">
         <div className="wrap">
-          <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
-          <div className="timeline">
+          <h2 className="sec-h2 project-process-heading rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
+          <div className="timeline project-process-timeline">
             {processSteps.map((step, index) => (
-              <div className="tl-item rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
+              <div className="tl-item project-process-step rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
                 <div className="tl-dot">{step.icon || '•'}</div>
-                <div className="tl-body">
+                <div className="tl-body project-process-card">
                   <div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div>
-                  {step.title && <h3 className="tl-title">{step.title}</h3>}
-                  {step.text && <p className="tl-text">{step.text}</p>}
+                  {step.title && <h3 className="tl-title project-process-card-title">{step.title}</h3>}
+                  {step.text && <p className="tl-text project-process-card-description">{step.text}</p>}
                 </div>
               </div>
             ))}
@@ -781,6 +982,10 @@ export default function ProjectPageClient({
           <button className="lb-nav lb-next" id="lb-next" type="button" aria-label="Next gallery image">&gt;</button>
         </div>
       </section>
+      )}
+
+      {showVideoShowcase && (
+        <VideoShowcase description={videoDescription} source={videoSource} title={videoTitle} url={videoUrl} />
       )}
 
       {showReel && project.reelSection && (
