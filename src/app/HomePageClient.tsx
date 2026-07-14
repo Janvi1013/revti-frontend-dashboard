@@ -438,7 +438,6 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   <div className="orb orb-2"></div>
   <div className="wrap">
     <div className="hero-content">
-      {heroContent?.eyebrow && <span className="hero-eyebrow rv">{heroContent.eyebrow}</span>}
       <h1 className="hero-h1">{heroContent ? renderHighlightedText(heroContent.title, heroContent.highlight) : (isContentLoading ? 'Loading live content' : 'No hero content available')}</h1>
       {heroContent?.subtitle && <p className="hero-sub rv" style={{ transitionDelay: ".1s" }}>{heroContent.subtitle}</p>}
       <div className="hero-actions rv" style={{ transitionDelay: ".2s" }}>

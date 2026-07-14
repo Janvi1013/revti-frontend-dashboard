@@ -761,17 +761,17 @@ export default function ProjectPageClient({
       )}
 
       {showProcess && (
-      <section className="proj-process" id="process">
+      <section className="proj-process project-process-section" id="process">
         <div className="wrap">
-          <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
-          <div className="timeline">
+          <h2 className="sec-h2 project-process-heading rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
+          <div className="timeline project-process-timeline">
             {processSteps.map((step, index) => (
-              <div className="tl-item rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
+              <div className="tl-item project-process-step rv" style={{ transitionDelay: `${index * 0.06}s` }} key={`${step.title}-${index}`}>
                 <div className="tl-dot">{step.icon || '•'}</div>
-                <div className="tl-body">
+                <div className="tl-body project-process-card">
                   <div className="tl-step">{step.step || `Phase ${String(index + 1).padStart(2, '0')}`}</div>
-                  {step.title && <h3 className="tl-title">{step.title}</h3>}
-                  {step.text && <p className="tl-text">{step.text}</p>}
+                  {step.title && <h3 className="tl-title project-process-card-title">{step.title}</h3>}
+                  {step.text && <p className="tl-text project-process-card-description">{step.text}</p>}
                 </div>
               </div>
             ))}

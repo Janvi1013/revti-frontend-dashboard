@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ProjectReelItem, ProjectReelSection as ProjectReelSectionData } from '@/lib/portfolio';
 
 type ProjectReelSectionProps = {
@@ -9,6 +9,7 @@ type ProjectReelSectionProps = {
 
 export default function ProjectReelSection({ reelSection }: ProjectReelSectionProps) {
   const [failedVideoIds, setFailedVideoIds] = useState<Record<string, boolean>>({});
+  const reelSectionRef = useRef<HTMLElement | null>(null);
 
   const visibleReels = useMemo(
     () => (reelSection?.items ?? [])
@@ -28,12 +29,79 @@ export default function ProjectReelSection({ reelSection }: ProjectReelSectionPr
     getReducedMotionServerSnapshot
   );
 
+  useEffect(() => {
+    const section = reelSectionRef.current;
+    if (!section || prefersReducedMotion) return;
+    if (typeof window === 'undefined') return;
+
+    const gsap = (window as any).gsap;
+    const ScrollTrigger = (window as any).ScrollTrigger;
+    if (!gsap || !ScrollTrigger) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const context = gsap.context(() => {
+      const intro = section.querySelector('.project-reel-content');
+      const items = section.querySelectorAll('.project-reel-item');
+      const canvases = section.querySelectorAll('.project-reel-canvas');
+
+      if (intro) {
+        gsap.fromTo(intro, { opacity: 0, y: 30 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 82%',
+            once: true,
+          },
+        });
+      }
+
+      if (items.length) {
+        gsap.fromTo(items, { opacity: 0, y: 36, scale: 0.98 }, {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.75,
+          stagger: 0.12,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 78%',
+            once: true,
+          },
+        });
+      }
+
+      if (canvases.length) {
+        gsap.fromTo(canvases, { opacity: 0, y: 24 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.65,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 76%',
+            once: true,
+          },
+        });
+      }
+    }, section);
+
+    return () => {
+      context.revert();
+    };
+  }, [prefersReducedMotion, visibleReels.length]);
+
   if (!reelSection?.enabled || visibleReels.length === 0) {
     return null;
   }
 
   return (
-    <section className="project-reel-section" aria-label={sectionTitle || 'Project reels'}>
+    <section ref={reelSectionRef} className="project-reel-section" aria-label={sectionTitle || 'Project reels'}>
       <div className="project-reel-inner">
         {hasSectionIntro && (
           <div className="project-reel-content rv">

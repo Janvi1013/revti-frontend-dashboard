@@ -2449,6 +2449,35 @@ export const indexCustomCss = `
     }
   }
 
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .hero-actions a,
+  .hero-actions button {
+    min-height: 48px;
+  }
+
+  @media (max-width: 767px) {
+    .hero-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      width: 100%;
+      gap: 14px;
+    }
+
+    .hero-actions a,
+    .hero-actions button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   /* Dynamic content fitting: centered rows without reserved blank columns. */
   .impact-grid {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 280px)) !important;

@@ -1923,4 +1923,99 @@ export const projectCustomCss = `
     }
   }
 
+
+  /* Process mobile readability: keep the existing rail/dot timeline, but prevent narrow word columns. */
+  .project-process-section .wrap {
+    max-width: 1100px;
+  }
+
+  .project-process-heading {
+    max-width: min(100%, 680px);
+    margin-inline: auto;
+    text-align: center;
+    font-size: clamp(32px, 7vw, 72px) !important;
+    line-height: 0.98 !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+    text-wrap: balance;
+  }
+
+  .project-process-timeline {
+    width: min(100%, 900px);
+    margin-inline: auto;
+  }
+
+  .project-process-step {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: start;
+  }
+
+  .project-process-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-process-card-title,
+  .project-process-card-description {
+    max-width: 100%;
+    min-width: 0;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .project-process-card-description {
+    line-height: 1.65;
+  }
+
+  @media (max-width: 600px) {
+    .project-process-section {
+      padding-inline: 16px;
+    }
+
+    .project-process-section .wrap {
+      padding-inline: 0 !important;
+    }
+
+    .project-process-heading {
+      font-size: clamp(30px, 10vw, 44px) !important;
+      line-height: 1.02 !important;
+      padding-inline: 16px;
+      margin-bottom: 38px !important;
+    }
+
+    .project-process-step {
+      grid-template-columns: 38px minmax(0, 1fr) !important;
+      column-gap: 10px !important;
+      gap: 10px !important;
+    }
+
+    .project-process-timeline::before {
+      left: 18px !important;
+    }
+
+    .project-process-step .tl-dot {
+      width: 38px !important;
+      height: 38px !important;
+      font-size: 14px !important;
+    }
+
+    .project-process-card {
+      padding: 18px 16px !important;
+      border-radius: 16px !important;
+    }
+
+    .project-process-card-title {
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .project-process-card-description {
+      font-size: 14px;
+      line-height: 1.65;
+    }
+  }
+
 `;
