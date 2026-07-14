@@ -98,6 +98,12 @@ export type ProjectReelItem = {
   displayOrder?: number;
 };
 
+export type ProjectVideo = {
+  type?: string;
+  source?: string;
+  url?: string;
+};
+
 export type ProjectReelSection = {
   enabled: boolean;
   title?: string;
@@ -146,22 +152,31 @@ export type PortfolioProject = {
   process: PortfolioProcessStep[];
   feedback: PortfolioFeedback[];
   sectionVisibility?: ProjectSectionVisibility;
+  section_visibility?: ProjectSectionVisibility;
   clientLogo?: string;
+  video?: ProjectVideo;
   videoType?: string;
+  videoSource?: string;
   videoUrl?: string;
+  video_type?: string;
+  video_source?: string;
+  video_url?: string;
   reelSection?: ProjectReelSection;
   icon?: string;
   placeholderGradient?: string;
 };
 
 
-export const normalizeFilterSlug = (value: string) =>
-  value
+export const normalizeFilterSlug = (value: string) => {
+  const slug = value
     .trim()
     .toLowerCase()
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
+  return slug === 'all-projects' ? 'all' : slug;
+};
 
 
 const formatFilterLabel = (value: string) => value.trim().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -246,14 +261,24 @@ export function projectMatchesFilter(project: PortfolioProject, activeFilter: st
   return getProjectFilterSlugs(project).includes(normalizedFilter);
 }
 
+export function getUniqueProjects(items: PortfolioProject[]): PortfolioProject[] {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const id = String(item.id || '');
+
+    if (!id || seen.has(id)) {
+      return false;
+    }
+
+    seen.add(id);
+    return true;
+  });
+}
+
 export function getPublishedProjects(allProjects: PortfolioProject[]): PortfolioProject[] {
-  return allProjects
-    .filter((project) => (project.status ? project.status === 'published' : true))
-    .filter((project) => Boolean(project.id))
-    .filter(
-      (project, index, array) =>
-        array.findIndex((candidate) => String(candidate.id) === String(project.id)) === index
-    )
+  return getUniqueProjects(allProjects)
+    .filter((project) => project.status === 'published' && Boolean(project.id))
     .sort((a, b) => {
       const sequenceA = Number(a.sequence ?? 0);
       const sequenceB = Number(b.sequence ?? 0);
@@ -291,15 +316,15 @@ export function resolveProjectNavigationFilter(
 }
 
 export const fallbackPortfolioProjects: PortfolioProject[] = [
-  { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'websites', title: 'Healthcare Platform', category: 'Websites', tags: ['Healthcare', 'SaaS', 'Dashboard'], image: '/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png', imageAlt: 'HealthCore Platform', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'events', title: 'LuxeStore Commerce', category: 'Events', tags: ['E-Commerce', 'UX Research', 'Design System'], image: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', imageAlt: 'LuxeStore Commerce', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'nova', title: 'FitTrack Pro', category: 'Publication', tags: ['iOS', 'Android', 'Health'], icon: '📱', placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'mfg', title: 'IndustrIQ IoT Dashboard', category: 'Publication', tags: ['React', 'IoT', 'Real-time'], icon: '🏭', placeholderGradient: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'seo', title: 'OrganicBoost SEO Campaign', category: 'Websites', tags: ['SEO', 'Marketing', 'Growth'], image: '/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png', imageAlt: 'OrganicBoost', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'social', title: 'ArtFlow Creative Platform', category: 'Interiors', tags: ['Creative', 'Collaboration', 'SaaS'], icon: '🎨', placeholderGradient: 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'fintech', title: 'PayWise Finance App', category: 'Packaging', tags: ['Fintech', 'Payments', 'Security'], icon: '💰', placeholderGradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))', gallery: [], stats: [], process: [], feedback: [] },
-  { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))', gallery: [], stats: [], process: [], feedback: [] },
+  { id: 'branding', title: 'Zenith Realty Rebrand', category: 'Branding', tags: ['Brand Identity', 'Visual Design', 'Guidelines'], image: '/Images/Gemini_Generated_Image_9hy5999hy5999hy5.png', imageAlt: 'Zenith Realty', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'websites', title: 'Healthcare Platform', category: 'Websites', tags: ['Healthcare', 'SaaS', 'Dashboard'], image: '/Images/Gemini_Generated_Image_9y2spc9y2spc9y2s.png', imageAlt: 'HealthCore Platform', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'events', title: 'LuxeStore Commerce', category: 'Events', tags: ['E-Commerce', 'UX Research', 'Design System'], image: '/Images/Gemini_Generated_Image_56kvyt56kvyt56kv.png', imageAlt: 'LuxeStore Commerce', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'nova', title: 'FitTrack Pro', category: 'Publication', tags: ['iOS', 'Android', 'Health'], icon: '📱', placeholderGradient: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'mfg', title: 'IndustrIQ IoT Dashboard', category: 'Publication', tags: ['React', 'IoT', 'Real-time'], icon: '🏭', placeholderGradient: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.2))', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'seo', title: 'OrganicBoost SEO Campaign', category: 'Websites', tags: ['SEO', 'Marketing', 'Growth'], image: '/Images/Gemini_Generated_Image_7pjuoj7pjuoj7pju.png', imageAlt: 'OrganicBoost', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'social', title: 'ArtFlow Creative Platform', category: 'Interiors', tags: ['Creative', 'Collaboration', 'SaaS'], icon: '🎨', placeholderGradient: 'linear-gradient(135deg, rgba(236,72,153,0.3), rgba(124,58,237,0.2))', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'fintech', title: 'PayWise Finance App', category: 'Packaging', tags: ['Fintech', 'Payments', 'Security'], icon: '💰', placeholderGradient: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(6,182,212,0.2))', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
+  { id: 'ecommerce', title: 'FoodieHub Delivery Platform', category: 'Events', tags: ['Food Tech', 'Marketplace', 'UX'], icon: '🍔', placeholderGradient: 'linear-gradient(135deg, rgba(251,146,60,0.3), rgba(236,72,153,0.2))', gallery: [], stats: [], process: [], feedback: [], status: 'published' },
 ];
 
 
@@ -617,6 +642,40 @@ const getRawPortfolioProjects = (payload: any): any[] => {
   return candidates.find(Array.isArray) || [];
 };
 
+
+const normalizeProjectVideo = (source: Record<string, unknown>): ProjectVideo => {
+  const rawVideo = source.video && typeof source.video === 'object' && !Array.isArray(source.video)
+    ? source.video as Record<string, unknown>
+    : undefined;
+
+  const videoType = String(
+    rawVideo?.type ??
+    source.video_type ??
+    source.videoType ??
+    ''
+  ).trim().toLowerCase();
+
+  const videoSource = String(
+    rawVideo?.source ??
+    source.video_source ??
+    source.videoSource ??
+    videoType
+  ).trim().toLowerCase();
+
+  const videoUrl = resolveMediaUrl(String(
+    rawVideo?.url ??
+    source.video_url ??
+    source.videoUrl ??
+    ''
+  ).trim());
+
+  return {
+    type: videoType,
+    source: videoSource,
+    url: videoUrl,
+  };
+};
+
 export const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
   const title = getStringValue(item, ['title', 'name', 'projectTitle', 'clientName']);
   if (!title) return null;
@@ -634,6 +693,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const sectionVisibility = normalizeProjectSectionVisibility(rawSectionVisibility);
   const rawReelSection = item?.reelSection ?? item?.reel_section;
   const reelSection = normalizeProjectReelSection(rawReelSection);
+  const video = normalizeProjectVideo(item);
 
   if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
     console.log('Raw section_visibility:', rawSectionVisibility);
@@ -686,9 +746,15 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
       text: getStringValue(f, ['text', 'quote', 'feedback']),
     })).filter(f => f.name || f.text),
     sectionVisibility,
+    section_visibility: sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
-    videoType: getStringValue(item, ['video_type', 'videoType']),
-    videoUrl: resolveAssetUrl(getStringValue(item, ['video_url', 'videoUrl'])),
+    video,
+    videoType: video.type,
+    videoSource: video.source,
+    videoUrl: video.url,
+    video_type: video.type,
+    video_source: video.source,
+    video_url: video.url,
     reelSection,
     status: getStringValue(item, ['status']) || 'published',
     sequence: getNumberValue(item, ['sequence', 'display_order', 'displayOrder']) ?? index,
