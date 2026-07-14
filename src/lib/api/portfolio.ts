@@ -30,14 +30,14 @@ export const getPortfolioEndpoint = (): string => {
   return baseUrl ? `${baseUrl}/api/portfolio` : '/api/portfolio';
 };
 
-const pickArray = <T = unknown>(...values: unknown[]): T[] => {
-  const value = values.find(Array.isArray);
+const pickFirstNonEmptyArray = <T = unknown>(...values: unknown[]): T[] => {
+  const value = values.find((candidate) => Array.isArray(candidate) && candidate.length > 0);
   return Array.isArray(value) ? value as T[] : [];
 };
 
 const normalizePortfolioApiData = (data: any): PortfolioApiData => ({
-  projects: pickArray(data?.projects, data?.data?.projects, data?.home?.projects),
-  categories: pickArray(data?.categories, data?.data?.categories, data?.home?.categories),
+  projects: pickFirstNonEmptyArray(data?.projects, data?.data?.projects, data?.home?.projects),
+  categories: pickFirstNonEmptyArray(data?.categories, data?.data?.categories, data?.home?.categories),
   siteSettings: data?.siteSettings && typeof data.siteSettings === 'object'
     ? data.siteSettings
     : data?.data?.siteSettings && typeof data.data.siteSettings === 'object'
@@ -45,9 +45,9 @@ const normalizePortfolioApiData = (data: any): PortfolioApiData => ({
       : data?.home?.siteSettings && typeof data.home.siteSettings === 'object'
         ? data.home.siteSettings
         : {},
-  clientLogos: pickArray(data?.clientLogos, data?.data?.clientLogos, data?.home?.clientLogos),
-  impactNumbers: pickArray(data?.impactNumbers, data?.data?.impactNumbers, data?.home?.impactNumbers),
-  socialLinks: pickArray(data?.socialLinks, data?.data?.socialLinks, data?.home?.socialLinks),
+  clientLogos: pickFirstNonEmptyArray(data?.clientLogos, data?.data?.clientLogos, data?.home?.clientLogos),
+  impactNumbers: pickFirstNonEmptyArray(data?.impactNumbers, data?.data?.impactNumbers, data?.home?.impactNumbers),
+  socialLinks: pickFirstNonEmptyArray(data?.socialLinks, data?.data?.socialLinks, data?.home?.socialLinks),
 });
 
 const logPortfolioDiagnostics = (details: {
