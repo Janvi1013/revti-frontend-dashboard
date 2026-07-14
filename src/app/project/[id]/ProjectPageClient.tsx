@@ -49,14 +49,87 @@ const isHtmlVideoSource = (source: string, url: string) => (
 );
 
 type VideoShowcaseProps = {
+  description?: string;
   source: string;
+  title?: string;
   url: string;
 };
 
-function VideoShowcase({ source, url }: VideoShowcaseProps) {
+function VideoShowcase({ description, source, title, url }: VideoShowcaseProps) {
+  const sectionRef = useRef<HTMLElement | null>(null);
   const normalizedSource = source.trim().toLowerCase();
+  const normalizedTitle = title?.trim() || '';
+  const normalizedDescription = description?.trim() || '';
   const youtubeEmbedUrl = normalizedSource === 'youtube' ? getYoutubeEmbedUrl(url) : '';
   const vimeoEmbedUrl = normalizedSource === 'vimeo' ? getVimeoEmbedUrl(url) : '';
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || typeof window === 'undefined') return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    const gsap = (window as any).gsap;
+    const ScrollTrigger = (window as any).ScrollTrigger;
+    if (!gsap || !ScrollTrigger) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const context = gsap.context(() => {
+      const heading = section.querySelector('.project-video-heading');
+      const descriptionEl = section.querySelector('.project-video-description');
+      const frames = section.querySelectorAll('.project-video-showcase-frame');
+
+      if (heading) {
+        gsap.fromTo(heading, { opacity: 0, y: 30 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+
+      if (descriptionEl) {
+        gsap.fromTo(descriptionEl, { opacity: 0, y: 24 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+
+      if (frames.length) {
+        gsap.fromTo(frames, { opacity: 0, y: 40, scale: 0.98 }, {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+    }, section);
+
+    return () => {
+      context.revert();
+    };
+  }, []);
 
   let content: ReactNode;
 
@@ -89,7 +162,13 @@ function VideoShowcase({ source, url }: VideoShowcaseProps) {
   }
 
   return (
-    <section className="proj-video project-video-showcase" aria-label="Project video showcase" data-disable-project-swipe>
+    <section ref={sectionRef} className="proj-video project-video-showcase" aria-label="Project video showcase" data-disable-project-swipe>
+      {(normalizedTitle || normalizedDescription) && (
+        <div className="project-video-showcase-copy">
+          {normalizedTitle && <h2 className="project-video-heading">{normalizedTitle}</h2>}
+          {normalizedDescription && <p className="project-video-description">{normalizedDescription}</p>}
+        </div>
+      )}
       <div className="project-video-showcase-frame">
         {content}
       </div>
@@ -672,6 +751,8 @@ export default function ProjectPageClient({
   const videoType = project.video?.type?.trim().toLowerCase() || project.video_type?.trim().toLowerCase() || project.videoType?.trim().toLowerCase() || '';
   const videoSource = project.video?.source?.trim().toLowerCase() || project.video_source?.trim().toLowerCase() || project.videoSource?.trim().toLowerCase() || videoType;
   const videoUrl = project.video?.url?.trim() || project.video_url?.trim() || project.videoUrl?.trim() || '';
+  const videoTitle = project.videoShowcase?.title?.trim() || project.video?.title?.trim() || 'Project Video';
+  const videoDescription = project.videoShowcase?.description?.trim() || project.video?.description?.trim() || '';
   const hasVideoShowcase = videoType !== 'none' && Boolean(videoUrl);
   const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
   const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
@@ -694,6 +775,8 @@ export default function ProjectPageClient({
       videoType,
       videoSource,
       videoUrl,
+      videoTitle,
+      videoDescription,
       hasVideoShowcase,
       showVideoShowcase,
     });
@@ -902,7 +985,7 @@ export default function ProjectPageClient({
       )}
 
       {showVideoShowcase && (
-        <VideoShowcase source={videoSource} url={videoUrl} />
+        <VideoShowcase description={videoDescription} source={videoSource} title={videoTitle} url={videoUrl} />
       )}
 
       {showReel && project.reelSection && (

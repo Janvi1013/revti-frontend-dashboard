@@ -102,6 +102,13 @@ export type ProjectVideo = {
   type?: string;
   source?: string;
   url?: string;
+  title?: string;
+  description?: string;
+};
+
+export type ProjectVideoShowcase = {
+  title?: string;
+  description?: string;
 };
 
 export type ProjectReelSection = {
@@ -155,6 +162,8 @@ export type PortfolioProject = {
   section_visibility?: ProjectSectionVisibility;
   clientLogo?: string;
   video?: ProjectVideo;
+  videoShowcase?: ProjectVideoShowcase;
+  video_showcase?: ProjectVideoShowcase;
   videoType?: string;
   videoSource?: string;
   videoUrl?: string;
@@ -673,7 +682,22 @@ const normalizeProjectVideo = (source: Record<string, unknown>): ProjectVideo =>
     type: videoType,
     source: videoSource,
     url: videoUrl,
+    title: getStringValue(rawVideo || {}, ['title', 'heading', 'label']),
+    description: getStringValue(rawVideo || {}, ['description', 'desc', 'text']),
   };
+};
+
+const normalizeProjectVideoShowcase = (source: Record<string, unknown>, video: ProjectVideo): ProjectVideoShowcase | undefined => {
+  const rawShowcase = (source.videoShowcase || source.video_showcase) &&
+    typeof (source.videoShowcase || source.video_showcase) === 'object' &&
+    !Array.isArray(source.videoShowcase || source.video_showcase)
+    ? (source.videoShowcase || source.video_showcase) as Record<string, unknown>
+    : undefined;
+
+  const title = getStringValue(rawShowcase || {}, ['title', 'heading', 'label']) || video.title;
+  const description = getStringValue(rawShowcase || {}, ['description', 'desc', 'text']) || video.description;
+
+  return title || description ? { title, description } : undefined;
 };
 
 export const normalizePortfolioProject = (item: any, index: number): PortfolioProject | null => {
@@ -694,6 +718,7 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
   const rawReelSection = item?.reelSection ?? item?.reel_section;
   const reelSection = normalizeProjectReelSection(rawReelSection);
   const video = normalizeProjectVideo(item);
+  const videoShowcase = normalizeProjectVideoShowcase(item, video);
 
   if (process.env.NODE_ENV !== 'production' && rawSectionVisibility) {
     console.log('Raw section_visibility:', rawSectionVisibility);
@@ -749,6 +774,8 @@ export const normalizePortfolioProject = (item: any, index: number): PortfolioPr
     section_visibility: sectionVisibility,
     clientLogo: resolveAssetUrl(getStringValue(item, ['client_logo', 'clientLogo'])),
     video,
+    videoShowcase,
+    video_showcase: videoShowcase,
     videoType: video.type,
     videoSource: video.source,
     videoUrl: video.url,

@@ -2026,6 +2026,31 @@ export const projectCustomCss = `
     background: var(--bg2) !important;
   }
 
+  .project-video-showcase-copy {
+    width: min(100%, 820px);
+    margin: 0 auto clamp(28px, 5vw, 52px);
+    text-align: center;
+  }
+
+  .project-video-heading {
+    margin: 0;
+    color: var(--txt);
+    font-size: clamp(34px, 6vw, 82px);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -.06em;
+    text-wrap: balance;
+  }
+
+  .project-video-description {
+    max-width: 640px;
+    margin: clamp(14px, 2.5vw, 24px) auto 0;
+    color: var(--txt2);
+    font-size: clamp(14px, 1.3vw, 17px);
+    line-height: 1.75;
+    overflow-wrap: break-word;
+  }
+
   .project-video-showcase-frame {
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -2059,6 +2084,11 @@ export const projectCustomCss = `
   @media (max-width: 640px) {
     .project-video-showcase {
       padding: clamp(52px, 10vw, 76px) 16px;
+    }
+
+    .project-video-heading {
+      font-size: clamp(30px, 11vw, 48px);
+      letter-spacing: -.05em;
     }
 
     .project-video-showcase-frame {
