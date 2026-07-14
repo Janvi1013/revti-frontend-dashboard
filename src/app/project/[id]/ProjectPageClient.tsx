@@ -205,8 +205,8 @@ export default function ProjectPageClient({
   const requestedFilter = normalizeFilterSlug(rawFilter) || 'all';
   const allPublishedProjects = useMemo(() => getPublishedProjects(projects.length ? projects : fallbackPortfolioProjects), [projects]);
   const navigationFilterState = useMemo(
-    () => resolveProjectNavigationFilter(allPublishedProjects, requestedFilter, project?.id),
-    [allPublishedProjects, project?.id, requestedFilter]
+    () => resolveProjectNavigationFilter(allPublishedProjects, requestedFilter, id),
+    [allPublishedProjects, id, requestedFilter]
   );
   const {
     requestedProjects,
@@ -215,10 +215,10 @@ export default function ProjectPageClient({
     navigationProjects,
   } = navigationFilterState;
   const currentIndex = useMemo(
-    () => project ? navigationProjects.findIndex(item => String(item.id) === String(project.id)) : -1,
-    [navigationProjects, project]
+    () => id ? navigationProjects.findIndex(item => String(item.id) === String(id)) : -1,
+    [navigationProjects, id]
   );
-  const canNavigate = currentIndex >= 0 && navigationProjects.length > 1;
+  const canNavigate = currentIndex >= 0 && navigationProjects.length >= 1;
   const previousProject = canNavigate
     ? navigationProjects[(currentIndex - 1 + navigationProjects.length) % navigationProjects.length]
     : undefined;
@@ -265,6 +265,9 @@ export default function ProjectPageClient({
     modal?.classList.remove('open');
     document.body.style.overflow = '';
 
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     router.push(getProjectHref(targetProject.id, resolvedNavigationFilter), { scroll: true });
   }, [isProjectNavigating, resolvedNavigationFilter, router]);
 
@@ -291,6 +294,14 @@ export default function ProjectPageClient({
     let active = true;
     let abortController: AbortController | null = null;
     setIsProjectNavigating(false);
+
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      const ScrollTrigger = (window as any).ScrollTrigger;
+      if (ScrollTrigger) {
+        ScrollTrigger.getAll().forEach((trigger: any) => trigger.kill());
+      }
+    }
 
     // Immediately try to find project in existing projects array or fallbacks to prevent flash of loading screen
     const foundProject = projects.find(item => item.id === id) || fallbackPortfolioProjects.find(item => item.id === id) || null;
