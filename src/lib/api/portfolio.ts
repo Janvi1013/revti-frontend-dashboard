@@ -109,7 +109,7 @@ export async function fetchPortfolioApiData(init?: RequestInit): Promise<Portfol
 
   const payload = (await response.json()) as ApiResponse<PortfolioApiData>;
 
-  const responseData = payload.data ?? (payload as any);
+  const responseData = payload as any;
 
   if (!responseData || typeof responseData !== 'object') {
     throw new Error('Portfolio API returned an invalid data payload.');

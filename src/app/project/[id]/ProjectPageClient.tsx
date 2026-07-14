@@ -73,22 +73,24 @@ export default function ProjectPageClient({
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
 
-    console.log('Requested filter:', requestedFilter);
-    console.log('Resolved filter:', resolvedNavigationFilter);
-    console.log('Using fallback to all:', shouldFallbackToAll);
-    console.log('Viewport width:', window.innerWidth);
-    console.log('Navigation can render:', canNavigate);
-    console.log('Navigation projects:', navigationProjects.length);
-    console.log('Published IDs:', allProjects.map((item) => item.id));
-    console.log('Filtered IDs:', requestedProjects.map((item) => item.id));
-    console.log('Navigation IDs:', navigationProjects.map((item) => item.id));
-    console.log('Current ID:', project?.id);
-    console.log('Current index:', currentIndex);
-    console.log('Previous ID:', previousProject?.id);
-    console.log('Next ID:', nextProject?.id);
-    if (previousProject) console.log('Previous URL:', getProjectHref(previousProject.id, resolvedNavigationFilter));
-    if (nextProject) console.log('Next URL:', getProjectHref(nextProject.id, resolvedNavigationFilter));
-  }, [allProjects, canNavigate, currentIndex, navigationProjects, nextProject, previousProject, project?.id, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
+    console.log({
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : null,
+      requestedFilter,
+      resolvedNavigationFilter,
+      usingFallbackToAll: shouldFallbackToAll,
+      filteredIds: requestedProjects.map((item) => item.id),
+      allPublishedIds: allProjects.map((item) => item.id),
+      navigationIds: navigationProjects.map((item) => item.id),
+      currentId: project?.id,
+      currentIndex,
+      previousId: previousProject?.id,
+      nextId: nextProject?.id,
+      previousHref: previousProject ? getProjectHref(previousProject.id, resolvedNavigationFilter) : null,
+      nextHref: nextProject ? getProjectHref(nextProject.id, resolvedNavigationFilter) : null,
+      canNavigate,
+      isProjectNavigating,
+    });
+  }, [allProjects, canNavigate, currentIndex, isProjectNavigating, navigationProjects, nextProject, previousProject, project?.id, requestedFilter, requestedProjects, resolvedNavigationFilter, shouldFallbackToAll]);
 
   const navigateToProject = useCallback((targetProject: PortfolioProject | undefined) => {
     if (!targetProject || isProjectNavigating) return;

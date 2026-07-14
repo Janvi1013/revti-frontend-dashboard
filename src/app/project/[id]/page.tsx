@@ -17,6 +17,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     <>
       <style dangerouslySetInnerHTML={{ __html: projectCustomCss }} />
       <ProjectPageClient
+        key={project?.id || id}
         initialProjects={result.content.projects}
         initialProject={project}
         id={id}
