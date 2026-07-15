@@ -9,7 +9,7 @@ import {
   getFilterSlugFromHash,
   getPrimaryProjectFilter,
   getProjectFilterHash,
-  isProjectFilterHash,
+  isProjectFilterHash as isFilterHash,
   loadWebsiteContent,
   normalizeFilterSlug,
   projectMatchesFilter,
@@ -96,7 +96,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
     window.sessionStorage.setItem('activeProjectSequence', JSON.stringify(filteredProjects.map(project => project.id)));
 
     const currentHash = window.location.hash;
-    const canReplaceHash = filterChangedByUserRef.current || isProjectFilterHash(currentHash);
+    const canReplaceHash = filterChangedByUserRef.current || isFilterHash(currentHash);
     if (!canReplaceHash) return;
 
     const nextHash = getProjectFilterHash(resolvedProjectFilter);

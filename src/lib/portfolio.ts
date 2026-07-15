@@ -202,7 +202,7 @@ export const normalizeFilterSlug = (value: string) => {
 export const getProjectFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
 
 export const isProjectFilterHash = (hash: string): boolean => (
-  /^#filter\([^)]+\)$/i.test(hash.trim())
+  /^#filter\(/i.test(hash.trim())
 );
 
 export const getFilterSlugFromHash = (hash: string) => {
