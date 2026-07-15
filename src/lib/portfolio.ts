@@ -144,6 +144,13 @@ export type PortfolioProject = {
   headline?: string;
   description?: string;
   shortDescription?: string;
+  shortDesc?: string;
+  desc?: string;
+  overview?: {
+    title?: string;
+    body?: string;
+  };
+  overview_title?: string;
   tags: string[];
   image?: string;
   imageAlt?: string;
@@ -176,6 +183,10 @@ export type PortfolioProject = {
 };
 
 
+export const hasText = (value: unknown): value is string => (
+  typeof value === 'string' && Boolean(value.trim())
+);
+
 export const normalizeFilterSlug = (value: string) => {
   const slug = value
     .trim()
@@ -187,6 +198,18 @@ export const normalizeFilterSlug = (value: string) => {
   return slug === 'all-projects' ? 'all' : slug;
 };
 
+
+export const getProjectFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
+
+export const isProjectFilterHash = (hash: string): boolean => (
+  /^#filter\(/i.test(hash.trim())
+);
+
+export const getFilterSlugFromHash = (hash: string) => {
+  if (!isProjectFilterHash(hash)) return '';
+  const match = hash.trim().match(/^#filter\(([^)]+)\)$/i);
+  return normalizeFilterSlug(match ? decodeURIComponent(match[1]) : '') || '';
+};
 
 const formatFilterLabel = (value: string) => value.trim().replace(/\b\w/g, (char) => char.toUpperCase());
 
