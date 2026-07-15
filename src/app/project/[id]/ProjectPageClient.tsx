@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useRouter } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, normalizeFilterSlug, projectMatchesFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
+import { getFilterSlugFromHash, getProjectFilterHash, hasText, loadWebsiteContent, normalizeFilterSlug, projectMatchesFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
 // ── Video helpers ────────────────────────────────────────────────────────────
 const getYoutubeEmbedUrl = (url: string): string => {
@@ -33,15 +33,12 @@ const getVimeoEmbedUrl = (url: string): string => {
 const isHtmlVideoSource = (source: string, url: string) =>
   ['upload', 'direct', 'mp4'].includes(source) || /\.(?:mp4|webm|mov|m4v)(?:\?.*)?$/i.test(url);
 
-const getFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
-
 const getActiveFilterFromLocation = () => {
   if (typeof window === 'undefined') return 'all';
 
-  const hashMatch = window.location.hash.match(/^#filter\((.+)\)$/i);
-  const hashFilter = hashMatch ? decodeURIComponent(hashMatch[1]) : '';
+  const hashFilter = getFilterSlugFromHash(window.location.hash);
   const queryFilter = new URLSearchParams(window.location.search).get('filter') || '';
-  const storedFilter = window.sessionStorage.getItem('activeCategoryFilter') || '';
+  const storedFilter = window.sessionStorage.getItem('activeProjectFilter') || window.sessionStorage.getItem('activeCategoryFilter') || '';
 
   return normalizeFilterSlug(hashFilter || queryFilter || storedFilter || 'all') || 'all';
 };
@@ -163,7 +160,7 @@ export default function ProjectPageClient({
         document.documentElement.classList.remove('project-route-is-transitioning');
       }, 650);
     }
-    router.push('/project/' + targetProjectId + getFilterHash(activeFilter), { scroll: true });
+    router.push('/project/' + targetProjectId + getProjectFilterHash(activeFilter), { scroll: true });
   }, [activeFilter, router]);
 
   useEffect(() => {
@@ -597,17 +594,34 @@ export default function ProjectPageClient({
   }
 
   const galleryImages = project.gallery.length ? project.gallery : [project.image].filter((image): image is string => Boolean(image));
+  const overviewHeading = project.overview?.title || project.overviewTitle || project.overview_title || project.headline || project.title;
+  const overviewIntroText = project.shortDescription || project.shortDesc || '';
+  const overviewBodyText = project.description || project.desc || project.overview?.body || '';
   const overviewCards = [
     { icon: '🎯', title: 'The Challenge', text: project.challenge },
     { icon: '💡', title: 'Our Approach', text: project.approach },
     { icon: '📈', title: 'The Impact', text: project.impact },
     { icon: '🛡️', title: 'Compliance First', text: project.compliance },
-  ].filter(card => card.text);
+  ].filter(card => hasText(card.text));
   const processSteps = project.process.length ? project.process : [];
   const similarProjects = projects.filter(item => item.id !== project.id).slice(0, 3);
 
   // Section visibility
-  const hasOverviewContent = overviewCards.length > 0;
+  const hasOverviewText =
+    hasText(project.overview?.title) ||
+    hasText(project.overview?.body) ||
+    hasText(project.overviewTitle) ||
+    hasText(project.overview_title) ||
+    hasText(project.shortDescription) ||
+    hasText(project.shortDesc) ||
+    hasText(project.description) ||
+    hasText(project.desc);
+  const hasOverviewCards = overviewCards.some((card) => (
+    hasText(card?.title) ||
+    hasText((card as any)?.body) ||
+    hasText((card as any)?.description) ||
+    hasText(card?.text)
+  ));
   const hasProcessContent = processSteps.length > 0;
   const hasImpactContent = project.stats.length > 0;
   const hasGalleryContent = galleryImages.length > 0;
@@ -615,6 +629,7 @@ export default function ProjectPageClient({
     ?.filter(item => item.enabled !== false)
     .filter(item => item.videoUrl?.trim()) ?? [];
   const hasReelContent = project.reelSection?.enabled === true && visibleReels.length > 0;
+  const overviewVisibility = project.sectionVisibility?.overview ?? (project as any).section_visibility?.overview;
   const videoVisibility = project.sectionVisibility?.videoShowcase ?? (project as any).section_visibility?.videoShowcase;
   const relatedProjectsVisibility = project.sectionVisibility?.relatedProjects ?? (project as any).section_visibility?.relatedProjects;
   const videoType = project.video?.type?.trim().toLowerCase() || (project as any).video_type?.trim().toLowerCase() || '';
@@ -623,7 +638,7 @@ export default function ProjectPageClient({
   const videoTitle = project.videoShowcase?.title?.trim() || project.video?.title?.trim() || '';
   const videoDescription = project.videoShowcase?.description?.trim() || project.video?.description?.trim() || '';
   const hasVideoShowcase = videoType !== 'none' && Boolean(videoUrl);
-  const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
+  const showOverview = overviewVisibility !== false && (hasOverviewText || hasOverviewCards);
   const showProcess = project.sectionVisibility?.process !== false && hasProcessContent;
   const showImpact = project.sectionVisibility?.impact !== false && hasImpactContent;
   const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
@@ -731,12 +746,14 @@ export default function ProjectPageClient({
           <div className="overview-grid">
             <div>
               <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}><span className="grad">Overview</span></h2>
-              <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>{project.overviewTitle || project.headline || project.title}</h2>
-              {project.shortDescription && (
-                <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{project.shortDescription}</p>
+              {hasText(overviewHeading) && (
+                <h2 className="ov-big rv" style={{ transitionDelay: ".1s" }}>{overviewHeading}</h2>
               )}
-              {project.description && (
-                <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{project.description}</p>
+              {hasText(overviewIntroText) && (
+                <p className="ov-p rv" style={{ transitionDelay: ".15s" }}>{overviewIntroText}</p>
+              )}
+              {hasText(overviewBodyText) && (
+                <p className="ov-p rv" style={{ transitionDelay: ".2s" }}>{overviewBodyText}</p>
               )}
             </div>
             {overviewCards.length > 0 && (

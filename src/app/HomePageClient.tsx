@@ -6,7 +6,10 @@ import { flushSync } from 'react-dom';
 import { submitEnquiry } from '@/lib/actions';
 import {
   buildVisibleProjectFilters,
+  getFilterSlugFromHash,
   getPrimaryProjectFilter,
+  getProjectFilterHash,
+  isProjectFilterHash,
   loadWebsiteContent,
   normalizeFilterSlug,
   projectMatchesFilter,
@@ -19,14 +22,6 @@ import {
   type SocialLink,
   type WebsiteContent
 } from '@/lib/portfolio';
-
-
-const getFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
-
-const getFilterSlugFromHash = (hash: string) => {
-  const match = hash.match(/^#filter\((.+)\)$/i);
-  return normalizeFilterSlug(match ? decodeURIComponent(match[1]) : '') || '';
-};
 
 const getInitialProjectFilter = () => {
   if (typeof window === 'undefined') return 'all';
@@ -59,6 +54,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialContent.socialLinks);
   const [activeProjectFilter, setActiveProjectFilter] = useState(getInitialProjectFilter);
   const filterButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const filterChangedByUserRef = useRef(false);
 
   const [portfolioCategoryFilters, setPortfolioCategoryFilters] = useState<ProjectFilter[]>(initialContent.categoryFilters || []);
   const [contentError, setContentError] = useState<string | null>(null);
@@ -95,11 +91,19 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem('activeProjectFilter', resolvedProjectFilter);
     window.sessionStorage.setItem('activeCategoryFilter', resolvedProjectFilter);
     window.sessionStorage.setItem('activeProjectSequence', JSON.stringify(filteredProjects.map(project => project.id)));
-    const nextHash = getFilterHash(resolvedProjectFilter);
-    if (window.location.hash === nextHash && !window.location.search) return;
-    window.history.replaceState(null, '', `${window.location.pathname}${nextHash}`);
+
+    const currentHash = window.location.hash;
+    const canReplaceHash = filterChangedByUserRef.current || isProjectFilterHash(currentHash);
+    if (!canReplaceHash) return;
+
+    const nextHash = getProjectFilterHash(resolvedProjectFilter);
+    if (currentHash !== nextHash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+    }
+    filterChangedByUserRef.current = false;
   }, [filteredProjects, resolvedProjectFilter]);
 
   const scrollActiveFilterIntoView = useCallback((filterSlug: string) => {
@@ -119,6 +123,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 
   const handleProjectFilterChange = useCallback((nextFilter: string) => {
     const nextSlug = normalizeFilterSlug(nextFilter) || 'all';
+    filterChangedByUserRef.current = true;
     const updateFilter = () => setActiveProjectFilter(nextSlug);
 
     if (!prefersReducedMotion && typeof document !== 'undefined' && 'startViewTransition' in document) {
@@ -520,7 +525,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       )}
       {filteredProjects.map((project, index) => (
         <Link
-          href={`/project/${project.id}${getFilterHash(resolvedProjectFilter)}`}
+          href={`/project/${project.id}${getProjectFilterHash(resolvedProjectFilter)}`}
           className="project-card home-project-grid-item"
           data-category={getPrimaryProjectFilter(project)?.slug || normalizeFilterSlug(project.category || '')}
           key={project.id}
