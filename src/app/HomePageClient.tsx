@@ -20,9 +20,19 @@ import {
   type WebsiteContent
 } from '@/lib/portfolio';
 
+
+const getFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
+
+const getFilterSlugFromHash = (hash: string) => {
+  const match = hash.match(/^#filter\((.+)\)$/i);
+  return normalizeFilterSlug(match ? decodeURIComponent(match[1]) : '') || '';
+};
+
 const getInitialProjectFilter = () => {
   if (typeof window === 'undefined') return 'all';
-  return normalizeFilterSlug(new URLSearchParams(window.location.search).get('filter') || 'all') || 'all';
+  const hashFilter = getFilterSlugFromHash(window.location.hash);
+  const queryFilter = normalizeFilterSlug(new URLSearchParams(window.location.search).get('filter') || '') || '';
+  return hashFilter || queryFilter || 'all';
 };
 
 const renderHighlightedText = (title: string, highlight: string) => {
@@ -85,12 +95,12 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get('filter') === resolvedProjectFilter) return;
-    searchParams.set('filter', resolvedProjectFilter);
-    const nextQuery = searchParams.toString();
-    window.history.replaceState(null, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
-  }, [resolvedProjectFilter]);
+    window.sessionStorage.setItem('activeCategoryFilter', resolvedProjectFilter);
+    window.sessionStorage.setItem('activeProjectSequence', JSON.stringify(filteredProjects.map(project => project.id)));
+    const nextHash = getFilterHash(resolvedProjectFilter);
+    if (window.location.hash === nextHash && !window.location.search) return;
+    window.history.replaceState(null, '', `${window.location.pathname}${nextHash}`);
+  }, [filteredProjects, resolvedProjectFilter]);
 
   const scrollActiveFilterIntoView = useCallback((filterSlug: string) => {
     window.requestAnimationFrame(() => {
@@ -510,7 +520,7 @@ export default function HomePageClient({ initialContent }: { initialContent: Web
       )}
       {filteredProjects.map((project, index) => (
         <Link
-          href={`/project/${project.id}?filter=${encodeURIComponent(resolvedProjectFilter)}`}
+          href={`/project/${project.id}${getFilterHash(resolvedProjectFilter)}`}
           className="project-card home-project-grid-item"
           data-category={getPrimaryProjectFilter(project)?.slug || normalizeFilterSlug(project.category || '')}
           key={project.id}

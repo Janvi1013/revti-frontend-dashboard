@@ -2096,4 +2096,63 @@ export const projectCustomCss = `
     }
   }
 
+  /* Studio Eksaat-style fixed project arrows */
+  .project-switcher {
+    position: fixed;
+    inset: 0;
+    z-index: 8800;
+    pointer-events: none;
+  }
+
+  .project-switch {
+    position: fixed;
+    top: 50%;
+    width: 76px;
+    height: 112px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    z-index: 8801;
+    mix-blend-mode: difference;
+    transition: transform .32s var(--ease), opacity .32s var(--ease);
+    cursor: pointer !important;
+  }
+
+  .project-switch svg {
+    width: 54px;
+    height: 90px;
+    display: block;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,.08));
+  }
+
+  .project-prev { left: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
+  .project-next { right: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
+
+  .project-switch:hover,
+  .project-switch:focus-visible {
+    opacity: .72;
+    outline: none;
+  }
+
+  .project-prev:hover,
+  .project-prev:focus-visible { transform: translateY(-50%) translateX(-5px) scale(1.03); }
+  .project-next:hover,
+  .project-next:focus-visible { transform: translateY(-50%) translateX(5px) scale(1.03); }
+
+  .project-route-is-transitioning body { opacity: .74; transition: opacity .28s var(--ease); }
+
+  @media (max-width: 768px) {
+    .project-switcher { display: none; }
+  }
+
 `;

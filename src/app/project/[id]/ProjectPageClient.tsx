@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import ProjectReelSection from '@/components/project/ProjectReelSection';
 import { submitEnquiry } from '@/lib/actions';
-import { loadWebsiteContent, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
+import { loadWebsiteContent, normalizeFilterSlug, projectMatchesFilter, type PortfolioProject, fallbackPortfolioProjects } from '@/lib/portfolio';
 
 // ── Video helpers ────────────────────────────────────────────────────────────
 const getYoutubeEmbedUrl = (url: string): string => {
@@ -32,6 +32,19 @@ const getVimeoEmbedUrl = (url: string): string => {
 
 const isHtmlVideoSource = (source: string, url: string) =>
   ['upload', 'direct', 'mp4'].includes(source) || /\.(?:mp4|webm|mov|m4v)(?:\?.*)?$/i.test(url);
+
+const getFilterHash = (filterSlug: string) => `#filter(${encodeURIComponent(filterSlug)})`;
+
+const getActiveFilterFromLocation = () => {
+  if (typeof window === 'undefined') return 'all';
+
+  const hashMatch = window.location.hash.match(/^#filter\((.+)\)$/i);
+  const hashFilter = hashMatch ? decodeURIComponent(hashMatch[1]) : '';
+  const queryFilter = new URLSearchParams(window.location.search).get('filter') || '';
+  const storedFilter = window.sessionStorage.getItem('activeCategoryFilter') || '';
+
+  return normalizeFilterSlug(hashFilter || queryFilter || storedFilter || 'all') || 'all';
+};
 
 type VideoShowcaseProps = {
   description?: string;
@@ -62,8 +75,8 @@ function VideoShowcase({ description, source, title, url }: VideoShowcaseProps) 
       const descriptionEl = section.querySelector('.project-video-description');
       const frames = section.querySelectorAll('.project-video-showcase-frame');
       const animOpts = { trigger: section, start: 'top 80%', once: true };
-      if (heading) gsap.fromTo(heading, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', scrollTrigger: animOpts });
-      if (descriptionEl) gsap.fromTo(descriptionEl, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', scrollTrigger: animOpts });
+      if (heading) gsap.fromTo(heading, { opacity: 0, y: 40, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out', scrollTrigger: animOpts });
+      if (descriptionEl) gsap.fromTo(descriptionEl, { opacity: 0, y: 40, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out', scrollTrigger: animOpts });
       if (frames.length) gsap.fromTo(frames, { opacity: 0, y: 40, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.15, ease: 'power3.out', scrollTrigger: animOpts });
     }, section);
     return () => { context.revert(); };
@@ -113,42 +126,45 @@ export default function ProjectPageClient({
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  // Calculate dynamic navigation sequences during render (SSR-safe)
-  const activeFilter = (typeof window !== 'undefined' ? sessionStorage.getItem('activeCategoryFilter') : null) || 'all';
-  
-  let storedSequence: string[] = [];
-  if (typeof window !== 'undefined') {
-    try {
-      const parsedSequence = JSON.parse(sessionStorage.getItem('activeProjectSequence') || '[]');
-      if (Array.isArray(parsedSequence)) {
-        storedSequence = parsedSequence.filter((projectId): projectId is string => typeof projectId === 'string' && Boolean(projectId));
-      }
-    } catch {
-      storedSequence = [];
+  // Calculate dynamic navigation sequences during render (SSR-safe).
+  // Studio Eksaat-style arrows move only within the active portfolio filter and loop circularly.
+  const projectNavigation = useMemo(() => {
+    const requestedFilter = getActiveFilterFromLocation();
+    const allProjectIds = projects.map((item) => item.id);
+    let activeFilter = requestedFilter;
+    let filteredSequence = requestedFilter === 'all'
+      ? allProjectIds
+      : projects.filter((item) => projectMatchesFilter(item, requestedFilter)).map((item) => item.id);
+
+    if (!filteredSequence.includes(id) || filteredSequence.length === 0) {
+      activeFilter = 'all';
+      filteredSequence = allProjectIds;
     }
-  }
 
-  const categorySequences = projects.reduce<Record<string, string[]>>((acc, item) => {
-    acc.all.push(item.id);
-    acc[item.category] = [...(acc[item.category] || []), item.id];
-    return acc;
-  }, { all: [] });
+    const currentProjectIndex = filteredSequence.indexOf(id);
+    const hasCircularNavigation = filteredSequence.length > 1 && currentProjectIndex >= 0;
 
-  let filteredSequence = storedSequence.includes(id)
-    ? storedSequence
-    : categorySequences[activeFilter] || categorySequences['all'];
+    return {
+      activeFilter,
+      hasCircularNavigation,
+      prevProjId: hasCircularNavigation ? filteredSequence[(currentProjectIndex - 1 + filteredSequence.length) % filteredSequence.length] : '',
+      nextProjId: hasCircularNavigation ? filteredSequence[(currentProjectIndex + 1) % filteredSequence.length] : '',
+      sequence: filteredSequence,
+    };
+  }, [id, projects]);
 
-  if (!filteredSequence.includes(id) || filteredSequence.length === 0) {
-    filteredSequence = categorySequences['all'];
-  }
+  const { activeFilter, hasCircularNavigation, prevProjId, nextProjId } = projectNavigation;
 
-  const currentProjectIndex = filteredSequence.indexOf(id);
-  const prevProjId = filteredSequence.length > 0
-    ? filteredSequence[(currentProjectIndex - 1 + filteredSequence.length) % filteredSequence.length]
-    : '';
-  const nextProjId = filteredSequence.length > 0
-    ? filteredSequence[(currentProjectIndex + 1) % filteredSequence.length]
-    : '';
+  const navigateToProject = useCallback((targetProjectId: string) => {
+    if (!targetProjectId) return;
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.add('project-route-is-transitioning');
+      window.setTimeout(() => {
+        document.documentElement.classList.remove('project-route-is-transitioning');
+      }, 650);
+    }
+    router.push('/project/' + targetProjectId + getFilterHash(activeFilter), { scroll: true });
+  }, [activeFilter, router]);
 
   useEffect(() => {
     let active = true;
@@ -392,8 +408,9 @@ export default function ProjectPageClient({
       if (activeLb && activeLb.classList.contains('open')) return;
       const activeModal = document.getElementById('back-form-modal');
       if (activeModal && activeModal.classList.contains('open')) return;
-      if (e.key === 'ArrowLeft') router.push('/project/' + prevProjId);
-      if (e.key === 'ArrowRight') router.push('/project/' + nextProjId);
+      if (!hasCircularNavigation) return;
+      if (e.key === 'ArrowLeft') navigateToProject(prevProjId);
+      if (e.key === 'ArrowRight') navigateToProject(nextProjId);
     };
     document.addEventListener('keydown', handleProjectSwitchKeys);
 
@@ -412,10 +429,13 @@ export default function ProjectPageClient({
       const dy = e.changedTouches[0].clientY - touchStartY;
       if (Math.abs(dy) > Math.abs(dx) * Math.tan(ANGLE_LIMIT * Math.PI / 180)) return;
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+      if (!hasCircularNavigation) return;
+      const swipeTarget = e.target as HTMLElement | null;
+      if (swipeTarget?.closest('[data-disable-project-swipe]')) return;
       if (dx < 0) {
-        router.push('/project/' + nextProjId);
+        navigateToProject(nextProjId);
       } else if (dx > 0) {
-        router.push('/project/' + prevProjId);
+        navigateToProject(prevProjId);
       }
     };
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -509,7 +529,7 @@ export default function ProjectPageClient({
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [id, router, projects, project, prevProjId, nextProjId]);
+  }, [id, router, projects, project, prevProjId, nextProjId, hasCircularNavigation, navigateToProject]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileNavOpen ? 'hidden' : '';
@@ -596,10 +616,11 @@ export default function ProjectPageClient({
     .filter(item => item.videoUrl?.trim()) ?? [];
   const hasReelContent = project.reelSection?.enabled === true && visibleReels.length > 0;
   const videoVisibility = project.sectionVisibility?.videoShowcase ?? (project as any).section_visibility?.videoShowcase;
+  const relatedProjectsVisibility = project.sectionVisibility?.relatedProjects ?? (project as any).section_visibility?.relatedProjects;
   const videoType = project.video?.type?.trim().toLowerCase() || (project as any).video_type?.trim().toLowerCase() || '';
   const videoSource = project.video?.source?.trim().toLowerCase() || (project as any).video_source?.trim().toLowerCase() || videoType;
   const videoUrl = project.video?.url?.trim() || (project as any).video_url?.trim() || '';
-  const videoTitle = project.videoShowcase?.title?.trim() || project.video?.title?.trim() || 'Project Video';
+  const videoTitle = project.videoShowcase?.title?.trim() || project.video?.title?.trim() || '';
   const videoDescription = project.videoShowcase?.description?.trim() || project.video?.description?.trim() || '';
   const hasVideoShowcase = videoType !== 'none' && Boolean(videoUrl);
   const showOverview = project.sectionVisibility?.overview !== false && hasOverviewContent;
@@ -608,6 +629,7 @@ export default function ProjectPageClient({
   const showGallery = project.sectionVisibility?.gallery !== false && hasGalleryContent;
   const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
   const showVideoShowcase = videoVisibility !== false && hasVideoShowcase;
+  const showRelatedProjects = relatedProjectsVisibility !== false && similarProjects.length > 0;
 
   return (
     <>
@@ -703,6 +725,7 @@ export default function ProjectPageClient({
         </div>
       </header>
 
+      {showOverview && (
       <section className="proj-overview" id="overview">
         <div className="wrap">
           <div className="overview-grid">
@@ -729,8 +752,9 @@ export default function ProjectPageClient({
           </div>
         </div>
       </section>
+      )}
 
-      {processSteps.length > 0 && (
+      {showProcess && (
       <section className="proj-process" id="process">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s", marginBottom: "56px" }}>From discovery to <span className="grad">deployment</span></h2>
@@ -807,15 +831,18 @@ export default function ProjectPageClient({
       </section>
       )}
 
-      <div className="project-switcher" aria-label="Project navigation">
-        <a className="project-switch project-prev" id="projectPrev" href={`/project/${prevProjId}`} aria-label="Previous project">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 20 8 12 16 4"></polyline></svg>
-        </a>
-        <a className="project-switch project-next" id="projectNext" href={`/project/${nextProjId}`} aria-label="Next project">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 20 16 12 8 4"></polyline></svg>
-        </a>
-      </div>
+      {hasCircularNavigation && (
+        <div className="project-switcher" aria-label={`Project navigation for ${activeFilter === 'all' ? 'all projects' : activeFilter}`}>
+          <button className="project-switch project-prev" id="projectPrev" type="button" aria-label="Previous project" onClick={() => navigateToProject(prevProjId)}>
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M38 14 22 50 38 86" /></svg>
+          </button>
+          <button className="project-switch project-next" id="projectNext" type="button" aria-label="Next project" onClick={() => navigateToProject(nextProjId)}>
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 14 16 36-16 36" /></svg>
+          </button>
+        </div>
+      )}
 
+      {showRelatedProjects && (
       <section className="proj-similar" id="similar">
         <div className="wrap">
           <h2 className="sec-h2 rv" style={{ transitionDelay: ".1s" }}>Explore <span className="grad">related work</span></h2>
@@ -838,6 +865,7 @@ export default function ProjectPageClient({
           </div>
         </div>
       </section>
+      )}
 
       <div id="back-form-modal" className="modal-overlay">
         <div className="modal-card">
