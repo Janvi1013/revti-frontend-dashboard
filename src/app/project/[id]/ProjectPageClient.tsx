@@ -645,6 +645,8 @@ export default function ProjectPageClient({
   const showReel = project.sectionVisibility?.reel !== false && hasReelContent;
   const showVideoShowcase = videoVisibility !== false && hasVideoShowcase;
   const showRelatedProjects = relatedProjectsVisibility !== false && similarProjects.length > 0;
+  const previousProject = projects.find((item) => item.id === prevProjId);
+  const nextProject = projects.find((item) => item.id === nextProjId);
 
   return (
     <>
@@ -701,6 +703,20 @@ export default function ProjectPageClient({
         <a href="/#contact" onClick={() => setIsMobileNavOpen(false)}>Contact</a>
       </div>
 
+      <div className="project-navigation-shell" aria-label={`Project navigation for ${activeFilter === 'all' ? 'all projects' : activeFilter}`}>
+        {hasCircularNavigation && (
+          <button
+            className="project-nav-arrow project-nav-arrow--previous"
+            id="projectPrev"
+            type="button"
+            aria-label={`Previous project${previousProject?.title ? `: ${previousProject.title}` : ''}`}
+            onClick={() => navigateToProject(prevProjId)}
+          >
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M38 14 22 50 38 86" /></svg>
+          </button>
+        )}
+
+        <main className="project-page-content">
       <header className="proj-hero">
         <div className="hero-mesh"></div>
         <div className="hero-grid-bg"></div>
@@ -848,17 +864,6 @@ export default function ProjectPageClient({
       </section>
       )}
 
-      {hasCircularNavigation && (
-        <div className="project-switcher" aria-label={`Project navigation for ${activeFilter === 'all' ? 'all projects' : activeFilter}`}>
-          <button className="project-switch project-prev" id="projectPrev" type="button" aria-label="Previous project" onClick={() => navigateToProject(prevProjId)}>
-            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M38 14 22 50 38 86" /></svg>
-          </button>
-          <button className="project-switch project-next" id="projectNext" type="button" aria-label="Next project" onClick={() => navigateToProject(nextProjId)}>
-            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 14 16 36-16 36" /></svg>
-          </button>
-        </div>
-      )}
-
       {showRelatedProjects && (
       <section className="proj-similar" id="similar">
         <div className="wrap">
@@ -883,6 +888,20 @@ export default function ProjectPageClient({
         </div>
       </section>
       )}
+        </main>
+
+        {hasCircularNavigation && (
+          <button
+            className="project-nav-arrow project-nav-arrow--next"
+            id="projectNext"
+            type="button"
+            aria-label={`Next project${nextProject?.title ? `: ${nextProject.title}` : ''}`}
+            onClick={() => navigateToProject(nextProjId)}
+          >
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 14 16 36-16 36" /></svg>
+          </button>
+        )}
+      </div>
 
       <div id="back-form-modal" className="modal-overlay">
         <div className="modal-card">
