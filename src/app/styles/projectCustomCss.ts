@@ -1455,99 +1455,65 @@ export const projectCustomCss = `
   }
 
   .project-navigation-shell {
-    position: fixed;
-    inset: 0;
-    z-index: 8800;
-    pointer-events: none;
     display: grid;
-    grid-template-columns: minmax(72px, 9vw) minmax(0, 1fr) minmax(72px, 9vw);
-  }
-
-  .project-navigation-rail {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-  }
-
-  .project-navigation-rail--left {
-    grid-column: 1;
-    justify-content: center;
-  }
-
-  .project-navigation-rail--right {
-    grid-column: 3;
-    justify-content: center;
-  }
-
-  .project-navigation-arrow {
-    width: clamp(46px, 5vw, 76px);
-    height: clamp(86px, 12vw, 156px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    color: rgba(255,255,255,.72);
-    pointer-events: auto;
-    z-index: 200;
-    cursor: pointer !important;
-    transition: color .25s ease, opacity .25s ease, transform .25s ease;
-  }
-
-
-
-  @media (min-width: 768px) {
-    .project-navigation-arrow {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      visibility: visible;
-      opacity: 1;
-      z-index: 200;
-    }
-  }
-
-  .project-navigation-arrow:hover,
-  .project-navigation-arrow:focus-visible {
-    color: #fff;
-    transform: scale(1.06);
-  }
-
-  .project-navigation-arrow:focus-visible {
-    outline: 1px solid rgba(255,255,255,.45);
-    outline-offset: 8px;
-    border-radius: 999px;
-  }
-
-  .project-navigation-arrow:disabled {
-    opacity: .35;
-    pointer-events: none;
-  }
-
-  .project-navigation-arrow-icon {
+    grid-template-columns: clamp(56px, 6vw, 96px) minmax(0, 1fr) clamp(56px, 6vw, 96px);
     width: 100%;
-    height: 100%;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 0 14px rgba(0,0,0,.45));
+    min-width: 0;
+    align-items: stretch;
   }
 
-  .project-navigation-arrow-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .project-page-content {
+    grid-column: 2;
+    min-width: 0;
+    width: 100%;
   }
+
+  .project-nav-arrow {
+    position: sticky;
+    top: 50vh;
+    align-self: start;
+    justify-self: center;
+    width: 56px;
+    height: 96px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    z-index: 50;
+    mix-blend-mode: difference;
+    transition: transform .32s var(--ease), opacity .32s var(--ease);
+    cursor: pointer !important;
+  }
+
+  .project-nav-arrow--previous { grid-column: 1; }
+  .project-nav-arrow--next { grid-column: 3; }
+
+  .project-nav-arrow svg {
+    width: 28px;
+    height: 72px;
+    display: block;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,.08));
+  }
+
+  .project-nav-arrow:hover,
+  .project-nav-arrow:focus-visible {
+    opacity: .72;
+    outline: none;
+  }
+
+  .project-nav-arrow--previous:hover,
+  .project-nav-arrow--previous:focus-visible { transform: translateY(-50%) translateX(-5px) scale(1.03); }
+  .project-nav-arrow--next:hover,
+  .project-nav-arrow--next:focus-visible { transform: translateY(-50%) translateX(5px) scale(1.03); }
 
   .tl-body,
   .tl-title,
@@ -1588,26 +1554,19 @@ export const projectCustomCss = `
       padding-block: clamp(58px, 10vw, 90px) !important;
     }
 
-    .project-navigation-shell {
-      grid-template-columns: 72px minmax(0, 1fr) 72px;
-    }
   }
 
-  @media (max-width: 1280px) {
-    .proj-overview .wrap,
-    .proj-process .wrap,
-    .proj-results .wrap,
-    .proj-similar .wrap,
-    .proj-hero-content,
-    .gallery-scroll-container,
-    .project-reel-inner {
-      padding-left: max(86px, clamp(18px, 4vw, 60px)) !important;
-      padding-right: max(86px, clamp(18px, 4vw, 60px)) !important;
-    }
-  }
 
   @media (max-width: 767.98px) {
     .project-navigation-shell {
+      display: block;
+    }
+
+    .project-page-content {
+      width: 100%;
+    }
+
+    .project-nav-arrow {
       display: none !important;
     }
   }
@@ -2096,63 +2055,28 @@ export const projectCustomCss = `
     }
   }
 
-  /* Studio Eksaat-style fixed project arrows */
-  .project-switcher {
-    position: fixed;
-    inset: 0;
-    z-index: 8800;
-    pointer-events: none;
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .project-navigation-shell {
+      grid-template-columns: 52px minmax(0, 1fr) 52px;
+    }
+
+    .project-nav-arrow {
+      width: 44px;
+      height: 72px;
+    }
+
+    .project-nav-arrow svg {
+      width: 24px;
+      height: 60px;
+    }
   }
 
-  .project-switch {
-    position: fixed;
-    top: 50%;
-    width: 76px;
-    height: 112px;
-    min-width: 44px;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    color: #fff;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    transform: translateY(-50%);
-    pointer-events: auto;
-    z-index: 8801;
-    mix-blend-mode: difference;
-    transition: transform .32s var(--ease), opacity .32s var(--ease);
-    cursor: pointer !important;
+  .project-video-showcase {
+    width: 100%;
+    min-width: 0;
   }
-
-  .project-switch svg {
-    width: 54px;
-    height: 90px;
-    display: block;
-    pointer-events: none;
-    filter: drop-shadow(0 1px 1px rgba(255,255,255,.08));
-  }
-
-  .project-prev { left: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
-  .project-next { right: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
-
-  .project-switch:hover,
-  .project-switch:focus-visible {
-    opacity: .72;
-    outline: none;
-  }
-
-  .project-prev:hover,
-  .project-prev:focus-visible { transform: translateY(-50%) translateX(-5px) scale(1.03); }
-  .project-next:hover,
-  .project-next:focus-visible { transform: translateY(-50%) translateX(5px) scale(1.03); }
 
   .project-route-is-transitioning body { opacity: .74; transition: opacity .28s var(--ease); }
 
-  @media (max-width: 768px) {
-    .project-switcher { display: none; }
-  }
 
 `;
