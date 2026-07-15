@@ -2107,47 +2107,47 @@ export const projectCustomCss = `
   .project-switch {
     position: fixed;
     top: 50%;
-    width: 56px;
-    height: 56px;
+    width: 76px;
+    height: 112px;
     min-width: 44px;
     min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    color: rgba(255,255,255,.86);
+    color: #fff;
     background: transparent;
-    border: 1px solid rgba(255,255,255,.34);
-    border-radius: 50%;
+    border: 0;
+    border-radius: 0;
     transform: translateY(-50%);
     pointer-events: auto;
     z-index: 8801;
-    transition: transform .32s var(--ease), border-color .32s var(--ease), color .32s var(--ease), background .32s var(--ease), opacity .32s var(--ease);
+    mix-blend-mode: difference;
+    transition: transform .32s var(--ease), opacity .32s var(--ease);
     cursor: pointer !important;
   }
 
   .project-switch svg {
-    width: 30px;
-    height: 30px;
+    width: 54px;
+    height: 90px;
     display: block;
     pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,.08));
   }
 
-  .project-prev { left: max(20px, calc((100vw - 1320px) / 2 - 84px)); }
-  .project-next { right: max(20px, calc((100vw - 1320px) / 2 - 84px)); }
+  .project-prev { left: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
+  .project-next { right: max(28px, calc((100vw - 1320px) / 2 - 74px)); }
 
   .project-switch:hover,
   .project-switch:focus-visible {
-    color: #fff;
-    border-color: rgba(255,255,255,.72);
-    background: rgba(255,255,255,.035);
+    opacity: .72;
     outline: none;
   }
 
   .project-prev:hover,
-  .project-prev:focus-visible { transform: translateY(-50%) translateX(-4px) scale(1.05); }
+  .project-prev:focus-visible { transform: translateY(-50%) translateX(-5px) scale(1.03); }
   .project-next:hover,
-  .project-next:focus-visible { transform: translateY(-50%) translateX(4px) scale(1.05); }
+  .project-next:focus-visible { transform: translateY(-50%) translateX(5px) scale(1.03); }
 
   .project-route-is-transitioning body { opacity: .74; transition: opacity .28s var(--ease); }
 

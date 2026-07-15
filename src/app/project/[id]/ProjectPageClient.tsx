@@ -839,10 +839,10 @@ export default function ProjectPageClient({
       {hasCircularNavigation && (
         <div className="project-switcher" aria-label={`Project navigation for ${projectNavigation.activeFilter === 'all' ? 'all projects' : projectNavigation.activeFilter}`}>
           <button className="project-switch project-prev" id="projectPrev" type="button" aria-label="Previous project" onClick={() => navigateToProject(prevProjId)}>
-            <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17.5 6.5 10 14l7.5 7.5" /></svg>
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M38 14 22 50 38 86" /></svg>
           </button>
           <button className="project-switch project-next" id="projectNext" type="button" aria-label="Next project" onClick={() => navigateToProject(nextProjId)}>
-            <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10.5 6.5 7.5 7.5-7.5 7.5" /></svg>
+            <svg viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m22 14 16 36-16 36" /></svg>
           </button>
         </div>
       )}
